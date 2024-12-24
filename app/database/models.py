@@ -18,21 +18,20 @@ class User(Base):
     tg_id = mapped_column(BigInteger)
 
 
-class Category(Base):
-    __tablename__ = 'categories'
+class Schedule(Base):
+    __tablename__ = 'schedule'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(25))
+    day: Mapped[str] = mapped_column(String(20), nullable=False)
+    time: Mapped[str] = mapped_column(String(20), nullable=False)
+    subject: Mapped[str] = mapped_column(String(100), nullable=False)
+    type: Mapped[str] = mapped_column(String(50))
+    teacher: Mapped[str] = mapped_column(String(100))
+    room: Mapped[str] = mapped_column(String(20))
+    zoom_link: Mapped[str] = mapped_column(String(255))
+    weeks: Mapped[str] = mapped_column(String(100))
 
 
-class Item(Base):
-    __tablename__ = 'items'
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(25))
-    description: Mapped[str] = mapped_column(String(120))
-    price: Mapped[int] = mapped_column()
-    category: Mapped[int] = mapped_column(ForeignKey('categories.id'))
 
 
 async def async_main():
