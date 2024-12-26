@@ -4,18 +4,27 @@ from app.database.models import async_session
 from app.database.models import User, Schedule
 from sqlalchemy import select
 
-async def set_db():
+async def set_db() -> None:
     gc = gspread.service_account(filename='creds.json')
-    worksheet = gc.open("КН-22/1").sheet1
-    list_of_dicts = worksheet.get_all_records()
-    await set_schedule(list_of_dicts)
+    spreadsheet = gc.open("Schedule")
+    worksheets = spreadsheet.worksheets()
 
-async def set_schedule(data: list[dict[str, int | float | str]]):
+    for sheet in worksheets:
+        title = sheet.title
+
+        data = sheet.get_all_records()
+        await set_schedule(data, title)
+
+async def set_schedule(data: list[dict[str, int | float | str]], title: str):
     async with async_session() as session:
         async with session.begin():
+            group = title.split('/')[0]
+            subgroup = title.split('/')[1]
             for record in data:
                 schedule = Schedule(
                     day=record["День"],
+                    group=group,
+                    subgroup=subgroup,
                     time=record["Час"],
                     subject=record["Предмет"],
                     type=record["Тип заняття"],
@@ -36,9 +45,30 @@ async def set_user(tg_id: int) -> None:
             session.add(User(tg_id=tg_id))
             await session.commit()
 
-async def get_schedule_by_day(day: str):
+async def get_schedule_by_day(request : str):
     async with async_session() as session:
-        result = await session.execute(select(Schedule).where(Schedule.day == day))
+        day, group, subgroup = request.split('/')
+        result = await session.execute(
+            select(Schedule).where(
+                Schedule.day == day,
+                Schedule.group == group,
+                Schedule.subgroup == subgroup
+            )
+        )
         schedules = result.scalars().all()
         return schedules
 
+async def get_all_groups() -> list[str]:
+    async with async_session() as session:
+        result = await session.execute(select(Schedule.group).distinct())
+        groups = result.scalars().all()
+        return groups
+
+async def get_all_subgroups_by_group(group: str) -> list[str]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Schedule.subgroup).filter(Schedule.group == group).distinct()
+        )
+        subgroups = result.scalars().all()
+
+        return subgroups

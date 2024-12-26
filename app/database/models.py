@@ -22,6 +22,8 @@ class Schedule(Base):
     __tablename__ = 'schedule'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    group: Mapped[str] = mapped_column(String(20), nullable=False)
+    subgroup: Mapped[str] = mapped_column(String(20), nullable=False)
     day: Mapped[str] = mapped_column(String(20), nullable=False)
     time: Mapped[str] = mapped_column(String(20), nullable=False)
     subject: Mapped[str] = mapped_column(String(100), nullable=False)

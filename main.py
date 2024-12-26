@@ -14,13 +14,9 @@ bot = Bot(token = TOKEN)
 
 dp = Dispatcher()
 
-
-
-
-
 async def main():
     await async_main()
-    await set_db()
+    #await set_db()
     dp.include_router(router)
     await dp.start_polling(bot)
 
