@@ -1,7 +1,8 @@
 import gspread
+from sqlalchemy.util import await_fallback
 
 from app.database.models import async_session
-from app.database.models import User, Schedule
+from app.database.models import User, Schedule, Group
 from sqlalchemy import select
 
 async def set_db() -> None:
@@ -13,18 +14,43 @@ async def set_db() -> None:
         title = sheet.title
 
         data = sheet.get_all_records()
-        await set_schedule(data, title)
+        await add_group(title)
+        group_id = await get_group_id_by_title(title)
+        await set_schedule(data, group_id)
 
-async def set_schedule(data: list[dict[str, int | float | str]], title: str):
+async def add_group(title: str):
+    specialty, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0], title.split('/')[1]
+
     async with async_session() as session:
         async with session.begin():
-            group = title.split('/')[0]
-            subgroup = title.split('/')[1]
+            group_exists = await session.scalar(
+                select(Group).where(
+                    Group.specialty == specialty,
+                    Group.group == group,
+                    Group.subgroup == subgroup
+                )
+            )
+
+            if not group_exists:
+                new_group = Group(
+                    specialty=specialty,
+                    group=group,
+                    subgroup=subgroup
+                )
+                session.add(new_group)
+                await session.commit()
+                print(f"Групу {title} успішно додано до таблиці Groups.")
+            else:
+                print(f"Група {title} вже існує в таблиці Groups.")
+
+
+async def set_schedule(data: list[dict[str, int | float | str]], group_id: int):
+    async with async_session() as session:
+        async with session.begin():
             for record in data:
                 schedule = Schedule(
+                    group_id=group_id,
                     day=record["День"],
-                    group=group,
-                    subgroup=subgroup,
                     time=record["Час"],
                     subject=record["Предмет"],
                     type=record["Тип заняття"],
@@ -45,30 +71,77 @@ async def set_user(tg_id: int) -> None:
             session.add(User(tg_id=tg_id))
             await session.commit()
 
-async def get_schedule_by_day(request : str):
+async def get_group_id_by_title(title: str) -> int:
+    specialty, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0], title.split('/')[1]
+
     async with async_session() as session:
-        day, group, subgroup = request.split('/')
+        result = await session.scalar(
+            select(Group.id).where(
+                Group.specialty == specialty,
+                Group.group == group,
+                Group.subgroup == subgroup
+            )
+        )
+        return result
+
+async def get_user_group_id_by_tg_id(tg_id: int) -> int:
+    async with async_session() as session:
+        result = await session.scalar(
+            select(User.group_id).where(
+                User.tg_id == tg_id
+            )
+        )
+        return result
+
+async def update_user_group(tg_id: int, group_title: str) -> None:
+    group_id = await get_group_id_by_title(group_title)
+
+    if group_id is None:
+        print(f"Групу {group_title} не знайдено.")
+        return
+
+    async with async_session() as session:
+        async with session.begin():
+            user = await session.scalar(select(User).where(User.tg_id == tg_id))
+
+            if user:
+                user.group_id = group_id
+                await session.commit()
+                print(
+                    f"Групу для користувача з tg_id={tg_id} успішно оновлено на group_id={group_id} для групи '{group_title}'.")
+            else:
+                print(f"Користувача з tg_id={tg_id} не знайдено.")
+
+
+async def get_schedule_by_day(day: str, tg_id: int):
+    async with async_session() as session:
         result = await session.execute(
             select(Schedule).where(
                 Schedule.day == day,
-                Schedule.group == group,
-                Schedule.subgroup == subgroup
+                Schedule.group_id == await get_user_group_id_by_tg_id(tg_id)
             )
         )
         schedules = result.scalars().all()
         return schedules
 
-async def get_all_groups() -> list[str]:
+async def get_all_specialties() -> list[str]:
     async with async_session() as session:
-        result = await session.execute(select(Schedule.group).distinct())
+        result = await session.execute(select(Group.specialty).distinct())
+        specialties = result.scalars().all()
+        return specialties
+
+async def get_all_groups_by_specialty(specialty: str) -> list[str]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Group.group).where(Group.specialty == specialty).distinct()
+        )
         groups = result.scalars().all()
         return groups
 
 async def get_all_subgroups_by_group(group: str) -> list[str]:
     async with async_session() as session:
         result = await session.execute(
-            select(Schedule.subgroup).filter(Schedule.group == group).distinct()
+            select(Group.subgroup).where(Group.group == group).distinct()
         )
         subgroups = result.scalars().all()
-
         return subgroups
