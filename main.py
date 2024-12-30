@@ -5,6 +5,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from app.handlers import router
 from app.database.models import async_main
+from app.utils import send_schedule
 from app.database.requests import set_db
 
 

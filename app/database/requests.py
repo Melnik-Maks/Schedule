@@ -71,6 +71,14 @@ async def set_user(tg_id: int) -> None:
             session.add(User(tg_id=tg_id))
             await session.commit()
 
+async def user_has_group(tg_id: int) -> bool:
+    async with async_session() as session:
+        result = await session.execute(
+            select(User.group_id).where(User.tg_id == tg_id)
+        )
+        group_id = result.scalar()
+        return group_id is not None
+
 async def get_group_id_by_title(title: str) -> int:
     specialty, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0], title.split('/')[1]
 
