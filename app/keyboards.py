@@ -8,23 +8,31 @@ from config import daysOfTheWeek
 from app.database.requests import get_all_specialties, get_all_groups_by_specialty, get_all_subgroups_by_group
 
 
-schedule = ReplyKeyboardMarkup(keyboard=
+menu = ReplyKeyboardMarkup(keyboard=
     [[KeyboardButton(text='Розклад')],
-    [KeyboardButton(text='Розклад на сьогодні')],
     [KeyboardButton(text='Змінити групу')]],
                                resize_keyboard=True)
 
 
-'''schedule = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='Розклад', callback_data='schedule')],
-    [InlineKeyboardButton(text='Змінити групу', callback_data='reset_group')]
-])'''
+schedule = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='Тиждень', callback_data='schedule_for_week')],
+    [InlineKeyboardButton(text='Розклад на сьогодні', callback_data='schedule_for_today')]
+    
+])
+
+async def specialties_for_start():
+    keyboard = InlineKeyboardBuilder()
+    all_specialties = await get_all_specialties()
+    for specialty in all_specialties:
+        keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"specialty_{specialty}"))
+    return keyboard.adjust(1).as_markup()
 
 async def specialties():
     keyboard = InlineKeyboardBuilder()
     all_specialties = await get_all_specialties()
     for specialty in all_specialties:
         keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"specialty_{specialty}"))
+    keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"goback_menu"))
     return keyboard.adjust(1).as_markup()
 
 async def groups(specialty: str):
