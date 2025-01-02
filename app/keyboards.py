@@ -12,7 +12,25 @@ menu = ReplyKeyboardMarkup(keyboard=
     [[KeyboardButton(text='Розклад')],
     [KeyboardButton(text='Змінити групу')]],
                                resize_keyboard=True)
+menu1 = ReplyKeyboardMarkup(keyboard=
+    [[KeyboardButton(text='Розклад')],
+    [KeyboardButton(text='Профіль')]],
+                               resize_keyboard=True)
 
+schedule1 = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text='Розклад на тиждень')],
+    [KeyboardButton(text='Сьогодні'), KeyboardButton(text='Завтра')],
+    [KeyboardButton(text='Оригінальний розклад')],
+    [KeyboardButton(text='Додому')]],
+                               resize_keyboard=True)
+original_schedule = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='EXEL', url='https://docs.google.com/spreadsheets/d/1eCEO-7sEocM7HDyafVcW5bI1n1nvu7De7IxD0RFw3cE/pubhtml#')]
+])
+
+profile = ReplyKeyboardMarkup(keyboard=
+    [[KeyboardButton(text='Інформація про тебе')],
+    [KeyboardButton(text='Змінити групу')]],
+                               resize_keyboard=True)
 
 schedule = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='Тиждень', callback_data='schedule_for_week')],
@@ -27,12 +45,14 @@ async def specialties_for_start():
         keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"specialty_{specialty}"))
     return keyboard.adjust(1).as_markup()
 
-async def specialties():
+async def specialties(add_button_go_back: bool = True):
     keyboard = InlineKeyboardBuilder()
     all_specialties = await get_all_specialties()
     for specialty in all_specialties:
         keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"specialty_{specialty}"))
-    keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"goback_menu"))
+
+    if add_button_go_back:
+        keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"goback_menu"))
     return keyboard.adjust(1).as_markup()
 
 async def groups(specialty: str):

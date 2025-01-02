@@ -19,7 +19,7 @@ async def send_schedule(destination: Message | CallbackQuery, day: str, schedule
                 f"{bold('Тижні:')} {i.weeks}\n"
             )
 
-            if i.type.lower() == "лекція":
+            if i.type.lower() == 'лекція':
                 subject_info += f"{bold('Zoom:')} {i.zoom_link}\n"
 
             await message.answer(subject_info, parse_mode="Markdown")
