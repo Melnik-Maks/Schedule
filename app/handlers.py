@@ -66,7 +66,7 @@ async def go_back_to_group(callback: CallbackQuery):
 async def set_user_group(callback: CallbackQuery):
     await rq.update_user_group(callback.from_user.id, callback.data.split('_')[1])
     await callback.message.edit_text('Дякуємо, вашу групу записано.')
-    await callback.message.answer(f'Ваша група {callback.data.split("_")[1]}', reply_markup=kb.menu1)
+    await callback.message.answer(f'Ваша група {callback.data.split("_")[1]}', reply_markup=kb.menu)
 
 @router.message(F.text == 'Розклад1')
 async def schedule(message: Message):
@@ -88,14 +88,10 @@ async def schedule_for_today(callback: CallbackQuery):
 
 @router.message(F.text == 'Розклад')
 async def schedule(message: Message):
-    await message.answer('Оберіть опцію: ', reply_markup=kb.schedule1)
+    await message.answer('Оберіть опцію: ', reply_markup=kb.schedule)
 
 @router.message(F.text == 'Профіль')
 async def schedule(message: Message):
-    await message.answer('Ваш профіль: ', reply_markup=kb.profile)
-
-@router.message(F.text == 'Інформація про тебе')
-async def info_about_you(message: Message):
     user = message.from_user
     response = (
         f"Ваше ім'я: {user.first_name}\n"
@@ -104,11 +100,11 @@ async def info_about_you(message: Message):
         f"Ваш ID: {user.id}\n"
         f"Ваша група: {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}"
     )
-    await message.answer(response)
+    await message.answer(response, reply_markup=kb.profile)
 
 @router.message(F.text == 'Додому')
 async def schedule_for_week(message: Message):
-    await message.answer('Ви повернулися в меню', reply_markup=kb.menu1)
+    await message.answer('Ви повернулися в меню', reply_markup=kb.menu)
 
 @router.message(F.text == 'Оригінальний розклад')
 async def schedule_for_week(message: Message):
@@ -126,7 +122,7 @@ async def schedule_for_today(message: Message):
     else:
         day = config.daysOfTheWeek[day_number]
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
-        await send_schedule(message, day, list_of_pairs_for_day)
+        await send_schedule(message, day, list_of_pairs_for_day, False)
 
 @router.message(F.text == 'Завтра')
 async def schedule_for_today(message: Message):
@@ -136,15 +132,14 @@ async def schedule_for_today(message: Message):
     else:
         day = config.daysOfTheWeek[day_number]
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
-        await send_schedule(message, day, list_of_pairs_for_day)
+        await send_schedule(message, day, list_of_pairs_for_day, False)
 
 @router.callback_query(F.data.startswith('day_'))
 async def schedule_for_day(callback: CallbackQuery):
     await callback.answer('')
     day = callback.data.split('_')[1]
     list_of_pairs_for_day = await rq.get_schedule_by_day(day, callback.from_user.id)
-    await send_schedule(callback, day, list_of_pairs_for_day)
-    #await callback.message.answer('Виберіть день', reply_markup=await kb.days())
+    await send_schedule(callback, day, list_of_pairs_for_day, True)
 
 
 @router.message(Command('overwrite'))

@@ -1,7 +1,9 @@
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.markdown import bold, italic
 
-async def send_schedule(destination: Message | CallbackQuery, day: str, schedule: list) -> None:
+from app.keyboards import yesterday_and_tomorrow
+
+async def send_schedule(destination: Message | CallbackQuery, day: str, schedule: list, add_buttons: bool) -> None:
     message = destination.message if isinstance(destination, CallbackQuery) else destination
 
     await message.answer(f"{bold('Розклад')} за {bold(day)}:\n", parse_mode="Markdown")
@@ -9,17 +11,20 @@ async def send_schedule(destination: Message | CallbackQuery, day: str, schedule
     if not schedule:
         await message.answer('На цей день немає пар :)')
     else:
-        for i in schedule:
+        for i in range(len(schedule)):
             subject_info = (
-                f"{bold('Предмет:')} {i.subject}\n"
-                f"{bold('Час:')} {i.time}\n"
-                f"{bold('Тип заняття:')} {italic(i.type)}\n"
-                f"{bold('Викладач:')} {i.teacher}\n"
-                f"{bold('Аудиторія:')} {i.room}\n"
-                f"{bold('Тижні:')} {i.weeks}\n"
+                f"📚 <b>{schedule[i].subject}</b>\n"
+                f"⏰ <i>{schedule[i].time}</i>\n"
+                f"📖 <i>{schedule[i].type.capitalize()}</i>\n"
+                f"👨‍🏫 {schedule[i].teacher}\n"
+                f"🏫 {schedule[i].room}\n"
+                f"🗓️ {schedule[i].weeks}\n"
             )
 
-            if i.type.lower() == 'лекція':
-                subject_info += f"{bold('Zoom:')} {i.zoom_link}\n"
+            if schedule[i].type.lower() == 'лекція':
+                subject_info += f"🔗 <a href='{schedule[i].zoom_link}'>{schedule[i].zoom_link}</a>\n"
 
-            await message.answer(subject_info, parse_mode="Markdown")
+            if add_buttons and i == len(schedule) - 1:
+                await message.answer(subject_info, parse_mode="HTML", reply_markup=await yesterday_and_tomorrow(day))
+            else:
+                await message.answer(subject_info, parse_mode="HTML")

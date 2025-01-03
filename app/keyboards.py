@@ -7,17 +7,12 @@ from config import daysOfTheWeek
 
 from app.database.requests import get_all_specialties, get_all_groups_by_specialty, get_all_subgroups_by_group
 
-
 menu = ReplyKeyboardMarkup(keyboard=
-    [[KeyboardButton(text='Розклад')],
-    [KeyboardButton(text='Змінити групу')]],
-                               resize_keyboard=True)
-menu1 = ReplyKeyboardMarkup(keyboard=
     [[KeyboardButton(text='Розклад')],
     [KeyboardButton(text='Профіль')]],
                                resize_keyboard=True)
 
-schedule1 = ReplyKeyboardMarkup(keyboard=[
+schedule = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='Розклад на тиждень')],
     [KeyboardButton(text='Сьогодні'), KeyboardButton(text='Завтра')],
     [KeyboardButton(text='Оригінальний розклад')],
@@ -28,17 +23,9 @@ original_schedule = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 profile = ReplyKeyboardMarkup(keyboard=
-    [[KeyboardButton(text='Інформація про тебе')],
-    [KeyboardButton(text='Змінити групу')],
+    [[KeyboardButton(text='Змінити групу')],
     [KeyboardButton(text='Додому')]],
                                resize_keyboard=True)
-
-schedule = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='Тиждень', callback_data='schedule_for_week')],
-    [InlineKeyboardButton(text='Розклад на сьогодні', callback_data='schedule_for_today')]
-    
-])
-
 async def specialties_for_start():
     keyboard = InlineKeyboardBuilder()
     all_specialties = await get_all_specialties()
@@ -78,3 +65,11 @@ async def days():
         keyboard.add(InlineKeyboardButton(text=day, callback_data=f"day_{day}"))
     return keyboard.adjust(2).as_markup()
 
+async def yesterday_and_tomorrow(day: str):
+    keyboard = InlineKeyboardBuilder()
+    day_number = daysOfTheWeek.index(day)
+    yesterday = daysOfTheWeek[(6 + day_number - 1) % 6]
+    tomorrow = daysOfTheWeek[(6 + day_number + 1) % 6]
+    keyboard.add(InlineKeyboardButton(text=f"<-{yesterday}", callback_data=f"day_{yesterday}"))
+    keyboard.add(InlineKeyboardButton(text=f"{tomorrow}->", callback_data=f"day_{tomorrow}"))
+    return keyboard.adjust(2).as_markup()
