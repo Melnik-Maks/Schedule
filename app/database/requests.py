@@ -79,6 +79,18 @@ async def user_has_group(tg_id: int) -> bool:
         group_id = result.scalar()
         return group_id is not None
 
+async def get_group_title_by_id(group_id: int) -> str:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Group).where(Group.id == group_id)
+        )
+        group = result.scalar()
+
+        if group:
+            return f"{group.specialty}-{group.group}/{group.subgroup}"
+        else:
+            return "Групу не знайдено"
+
 async def get_group_id_by_title(title: str) -> int:
     specialty, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0], title.split('/')[1]
 

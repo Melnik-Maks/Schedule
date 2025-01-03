@@ -38,8 +38,8 @@ async def reset_group(message: Message):
 
 @router.callback_query(F.data.startswith('goback_menu'))
 async def go_back_to_group(callback: CallbackQuery):
-    await callback.answer('Ви повернулися в меню')
-    await callback.message.edit_text('Меню')
+    await callback.answer('Ви повернулися в профіль')
+    await callback.message.edit_text('Ваш профіль')
 
 @router.callback_query(F.data.startswith('reset_group'))
 async def reset_group1(callback: CallbackQuery):
@@ -89,6 +89,22 @@ async def schedule_for_today(callback: CallbackQuery):
 @router.message(F.text == 'Розклад')
 async def schedule(message: Message):
     await message.answer('Оберіть опцію: ', reply_markup=kb.schedule1)
+
+@router.message(F.text == 'Профіль')
+async def schedule(message: Message):
+    await message.answer('Ваш профіль: ', reply_markup=kb.profile)
+
+@router.message(F.text == 'Інформація про тебе')
+async def info_about_you(message: Message):
+    user = message.from_user
+    response = (
+        f"Ваше ім'я: {user.first_name}\n"
+        f"Ваше прізвище: {user.last_name or 'не вказано'}\n"
+        f"Ваш юзернейм: @{user.username or 'не вказано'}\n"
+        f"Ваш ID: {user.id}\n"
+        f"Ваша група: {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}"
+    )
+    await message.answer(response)
 
 @router.message(F.text == 'Додому')
 async def schedule_for_week(message: Message):

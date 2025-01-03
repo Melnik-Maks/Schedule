@@ -29,7 +29,8 @@ original_schedule = InlineKeyboardMarkup(inline_keyboard=[
 
 profile = ReplyKeyboardMarkup(keyboard=
     [[KeyboardButton(text='Інформація про тебе')],
-    [KeyboardButton(text='Змінити групу')]],
+    [KeyboardButton(text='Змінити групу')],
+    [KeyboardButton(text='Додому')]],
                                resize_keyboard=True)
 
 schedule = InlineKeyboardMarkup(inline_keyboard=[
