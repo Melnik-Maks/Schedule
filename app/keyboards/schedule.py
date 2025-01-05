@@ -1,31 +1,20 @@
-from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton,
-                           InlineKeyboardMarkup, InlineKeyboardButton)
-
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.database.requests import get_all_specialties, get_all_groups_by_specialty, get_all_subgroups_by_group
 from config import daysOfTheWeek
 
-from app.database.requests import get_all_specialties, get_all_groups_by_specialty, get_all_subgroups_by_group
-
-menu = ReplyKeyboardMarkup(keyboard=
-    [[KeyboardButton(text='Розклад')],
-    [KeyboardButton(text='Профіль')]],
-                               resize_keyboard=True)
-
 schedule = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='Розклад на тиждень')],
-    [KeyboardButton(text='Сьогодні'), KeyboardButton(text='Завтра')],
-    [KeyboardButton(text='Оригінальний розклад')],
-    [KeyboardButton(text='Додому')]],
-                               resize_keyboard=True)
+    [KeyboardButton(text='🗓️ Розклад на тиждень')],
+    [KeyboardButton(text='📆 Сьогодні'), KeyboardButton(text='📆 Завтра')],
+    [KeyboardButton(text='📜 Оригінальний розклад')],
+    [KeyboardButton(text='🏠 Додому')]
+], resize_keyboard=True)
+
 original_schedule = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='EXEL', url='https://docs.google.com/spreadsheets/d/1eCEO-7sEocM7HDyafVcW5bI1n1nvu7De7IxD0RFw3cE/pubhtml#')]
+    [InlineKeyboardButton(text='📊 EXEL', url='https://docs.google.com/spreadsheets/d/1eCEO-7sEocM7HDyafVcW5bI1n1nvu7De7IxD0RFw3cE/pubhtml#')]
 ])
 
-profile = ReplyKeyboardMarkup(keyboard=
-    [[KeyboardButton(text='Змінити групу')],
-    [KeyboardButton(text='Додому')]],
-                               resize_keyboard=True)
 async def specialties_for_start():
     keyboard = InlineKeyboardBuilder()
     all_specialties = await get_all_specialties()
@@ -38,7 +27,6 @@ async def specialties(add_button_go_back: bool = True):
     all_specialties = await get_all_specialties()
     for specialty in all_specialties:
         keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"specialty_{specialty}"))
-
     if add_button_go_back:
         keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"goback_menu"))
     return keyboard.adjust(1).as_markup()

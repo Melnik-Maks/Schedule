@@ -8,6 +8,7 @@ from aiogram.utils.markdown import bold, italic, code
 from aiogram.fsm.context import FSMContext
 from pyasn1_modules.rfc8018 import algid_hmacWithSHA1
 from sqlalchemy.util import await_fallback
+import random
 
 
 import app.keyboards as kb
@@ -30,9 +31,9 @@ async def cmd_start(message: Message):
         await message.answer('Привіт, це бот щоб зручно переглядати розклад :)')
         await message.answer('Спочатку виберіть свою групу ;)\nВиберіть вашу спецвальність', reply_markup=await kb.specialties(is_member))
     else:
-        await message.answer('Виберіть', reply_markup=kb.menu1)
+        await message.answer('Виберіть', reply_markup=kb.menu)
 
-@router.message(F.text == 'Змінити групу')
+@router.message(F.text == '🔄 Змінити групу')
 async def reset_group(message: Message):
     await message.answer('Виберіть спецвальність', reply_markup=await kb.specialties())
 
@@ -41,9 +42,6 @@ async def go_back_to_group(callback: CallbackQuery):
     await callback.answer('Ви повернулися в профіль')
     await callback.message.edit_text('Ваш профіль')
 
-@router.callback_query(F.data.startswith('reset_group'))
-async def reset_group1(callback: CallbackQuery):
-    await callback.message.answer('Виберіть спецвальність', reply_markup=await kb.specialties())
 
 @router.callback_query(F.data.startswith('specialty_'))
 async def group(callback: CallbackQuery):
@@ -68,29 +66,11 @@ async def set_user_group(callback: CallbackQuery):
     await callback.message.edit_text('Дякуємо, вашу групу записано.')
     await callback.message.answer(f'Ваша група {callback.data.split("_")[1]}', reply_markup=kb.menu)
 
-@router.message(F.text == 'Розклад1')
+@router.message(F.text == '📅 Розклад')
 async def schedule(message: Message):
     await message.answer('Оберіть опцію: ', reply_markup=kb.schedule)
 
-@router.callback_query(F.data == 'schedule_for_week')
-async def schedule_for_week(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть день', reply_markup=await kb.days())
-
-@router.callback_query(F.data == 'schedule_for_today')
-async def schedule_for_today(callback: CallbackQuery):
-    day_number = callback.message.date.weekday()
-    if day_number == 6:
-        await callback.message.answer('В неділю пар немає ;)')
-    else:
-        day = config.daysOfTheWeek[day_number]
-        list_of_pairs_for_day = await rq.get_schedule_by_day(day, callback.from_user.id)
-        await send_schedule(callback.message, day, list_of_pairs_for_day)
-
-@router.message(F.text == 'Розклад')
-async def schedule(message: Message):
-    await message.answer('Оберіть опцію: ', reply_markup=kb.schedule)
-
-@router.message(F.text == 'Профіль')
+@router.message(F.text == '👤 Профіль')
 async def schedule(message: Message):
     user = message.from_user
     response = (
@@ -102,19 +82,19 @@ async def schedule(message: Message):
     )
     await message.answer(response, reply_markup=kb.profile)
 
-@router.message(F.text == 'Додому')
+@router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
     await message.answer('Ви повернулися в меню', reply_markup=kb.menu)
 
-@router.message(F.text == 'Оригінальний розклад')
+@router.message(F.text == '📜 Оригінальний розклад')
 async def schedule_for_week(message: Message):
     await message.answer('Ось оригінальний розклад: ', reply_markup=kb.original_schedule)
 
-@router.message(F.text == 'Розклад на тиждень')
+@router.message(F.text == '🗓️ Розклад на тиждень')
 async def schedule_for_week(message: Message):
     await message.answer('Виберіть день', reply_markup=await kb.days())
 
-@router.message(F.text == 'Сьогодні')
+@router.message(F.text == '📆 Сьогодні')
 async def schedule_for_today(message: Message):
     day_number = message.date.weekday()
     if day_number == 6:
@@ -124,8 +104,8 @@ async def schedule_for_today(message: Message):
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
         await send_schedule(message, day, list_of_pairs_for_day, False)
 
-@router.message(F.text == 'Завтра')
-async def schedule_for_today(message: Message):
+@router.message(F.text == '📆 Завтра')
+async def schedule_for_tomorrow(message: Message):
     day_number = (message.date.weekday() + 1) % 7
     if day_number == 6:
         await message.answer('В неділю пар немає ;)')
@@ -140,6 +120,29 @@ async def schedule_for_day(callback: CallbackQuery):
     day = callback.data.split('_')[1]
     list_of_pairs_for_day = await rq.get_schedule_by_day(day, callback.from_user.id)
     await send_schedule(callback, day, list_of_pairs_for_day, True)
+
+@router.message(F.text == '⚜️ Підтримка ⚜️')
+async def support(message: Message):
+    await message.answer_sticker(
+        "CAACAgIAAxkBAAIFe2d60JdzM4YRAdwlYigzUHi3alC9AAI8XwACDQOgSnN2ylbRRSMaNgQ",
+        reply_markup=kb.support_button
+    )
+
+    '''sticker_pack_name = "StickerStar0132_by_e4zybot"
+
+    try:
+        sticker_set = await message.bot.get_sticker_set(sticker_pack_name)
+        random_sticker = random.choice(sticker_set.stickers)
+
+        await message.answer_sticker(random_sticker.file_id, reply_markup=kb.support_button)
+
+    except Exception as e:
+        await message.reply(f"Не вдалося отримати стікер: {e}")'''
+
+@router.message(F.sticker)
+async def get_sticker_id(message: Message):
+    sticker = message.sticker
+    await message.reply(f"File ID цього стікера: {sticker.file_id}")
 
 
 @router.message(Command('overwrite'))
