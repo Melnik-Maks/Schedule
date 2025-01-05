@@ -14,6 +14,7 @@ import random
 import app.keyboards as kb
 import app.database.requests as rq
 import config
+from app.database.requests import user_has_group
 from app.utils import send_schedule
 
 router = Router()
@@ -35,36 +36,50 @@ async def cmd_start(message: Message):
 
 @router.message(F.text == '🔄 Змінити групу')
 async def reset_group(message: Message):
-    await message.answer('Виберіть спецвальність', reply_markup=await kb.specialties())
+    user_group = await user_has_group(message.from_user.id)
+    await message.answer('Виберіть спецвальність', reply_markup=await kb.specialties(user_group))
 
-@router.callback_query(F.data.startswith('goback_menu'))
+@router.callback_query(F.data.startswith('settings'))
 async def go_back_to_group(callback: CallbackQuery):
-    await callback.answer('Ви повернулися в профіль')
-    await callback.message.edit_text('Ваш профіль')
+    await callback.answer('Ви повернулися до налаштувань')
+    await callback.message.edit_text('Налаштування профілю')
 
+@router.callback_query(F.data.startswith('specialty'))
+async def course(callback: CallbackQuery):
+    user_group = await user_has_group(callback.from_user.id)
+    await callback.message.edit_text('Виберіть спецвальність', reply_markup=await kb.specialties(user_group))
 
-@router.callback_query(F.data.startswith('specialty_'))
-async def group(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть вашу групу', reply_markup=await kb.groups(callback.data.split('_')[1]))
-
-@router.callback_query(F.data.startswith('goback_specialty'))
-async def go_back_to_specialty(callback: CallbackQuery):
-    is_member = await rq.user_has_group(callback.from_user.id)
-    await callback.message.edit_text('Виберіть спецвальність', reply_markup=await kb.specialties(is_member))
+@router.callback_query(F.data.startswith('course_'))
+async def course(callback: CallbackQuery):
+    await callback.message.edit_text('Виберіть ваш курс', reply_markup=await kb.courses(callback.data.split('_')[1]))
 
 @router.callback_query(F.data.startswith('group_'))
-async def subgroup(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть вашу підгрупу', reply_markup=await kb.subgroups(callback.data.split('_')[1]))
-
-@router.callback_query(F.data.startswith('goback_group'))
-async def go_back_to_group(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть вашу групу', reply_markup=await kb.groups(callback.data.split('_')[2]))
+async def group(callback: CallbackQuery):
+    await callback.message.edit_text('Виберіть вашу групу', reply_markup=await kb.groups(
+        callback.data.split('_')[1],
+        callback.data.split('_')[2]
+    ))
 
 @router.callback_query(F.data.startswith('subgroup_'))
+async def subgroup(callback: CallbackQuery):
+    await callback.message.edit_text('Виберіть вашу підгрупу', reply_markup=await kb.subgroups(
+        callback.data.split('_')[1],
+        callback.data.split('_')[2],
+        callback.data.split('_')[3]
+    ))
+
+@router.callback_query(F.data.startswith('setGroup_'))
 async def set_user_group(callback: CallbackQuery):
-    await rq.update_user_group(callback.from_user.id, callback.data.split('_')[1])
-    await callback.message.edit_text('Дякуємо, вашу групу записано.')
-    await callback.message.answer(f'Ваша група {callback.data.split("_")[1]}', reply_markup=kb.menu)
+    if await rq.user_has_group(callback.from_user.id):
+        await rq.update_user_group(callback.from_user.id, callback.data.split('_')[1])
+        await callback.message.edit_text(f'Дякуємо, вашу групу змінено.')
+        await callback.message.answer(f'Ваша нова група {callback.data.split("_")[1]}',
+                                         reply_markup=kb.settings)
+    else:
+        await rq.update_user_group(callback.from_user.id, callback.data.split('_')[1])
+        await callback.message.edit_text(f'Дякуємо, вашу групу записано.')
+        await callback.message.answer(f' Ваша група {callback.data.split("_")[1]}',
+                                         reply_markup=kb.menu)
 
 @router.message(F.text == '📅 Розклад')
 async def schedule(message: Message):
@@ -120,6 +135,13 @@ async def schedule_for_day(callback: CallbackQuery):
     day = callback.data.split('_')[1]
     list_of_pairs_for_day = await rq.get_schedule_by_day(day, callback.from_user.id)
     await send_schedule(callback, day, list_of_pairs_for_day, True)
+
+@router.message(F.text == '⚙️ Налаштування')
+async def support(message: Message):
+    await message.answer(
+        'Налаштування профілю',
+        reply_markup=kb.settings
+    )
 
 @router.message(F.text == '⚜️ Підтримка ⚜️')
 async def support(message: Message):

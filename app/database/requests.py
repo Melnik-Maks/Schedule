@@ -5,6 +5,8 @@ from app.database.models import async_session
 from app.database.models import User, Schedule, Group
 from sqlalchemy import select
 
+
+
 async def set_db() -> None:
     gc = gspread.service_account(filename='creds.json')
     spreadsheet = gc.open("Schedule")
@@ -19,13 +21,14 @@ async def set_db() -> None:
         await set_schedule(data, group_id)
 
 async def add_group(title: str):
-    specialty, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0], title.split('/')[1]
+    specialty, course, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0][0], title.split('-')[1].split('/')[0][1], title.split('/')[1]
 
     async with async_session() as session:
         async with session.begin():
             group_exists = await session.scalar(
                 select(Group).where(
                     Group.specialty == specialty,
+                    Group.course == course,
                     Group.group == group,
                     Group.subgroup == subgroup
                 )
@@ -34,6 +37,7 @@ async def add_group(title: str):
             if not group_exists:
                 new_group = Group(
                     specialty=specialty,
+                    course=course,
                     group=group,
                     subgroup=subgroup
                 )
@@ -92,12 +96,13 @@ async def get_group_title_by_id(group_id: int) -> str:
             return "Групу не знайдено"
 
 async def get_group_id_by_title(title: str) -> int:
-    specialty, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0], title.split('/')[1]
+    specialty, course, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0][0], title.split('-')[1].split('/')[0][1], title.split('/')[1]
 
     async with async_session() as session:
         result = await session.scalar(
             select(Group.id).where(
                 Group.specialty == specialty,
+                Group.course == course,
                 Group.group == group,
                 Group.subgroup == subgroup
             )
@@ -150,18 +155,26 @@ async def get_all_specialties() -> list[str]:
         specialties = result.scalars().all()
         return specialties
 
-async def get_all_groups_by_specialty(specialty: str) -> list[str]:
+async def get_all_courses(specialty: str) -> list[str]:
     async with async_session() as session:
         result = await session.execute(
-            select(Group.group).where(Group.specialty == specialty).distinct()
+            select(Group.course).where(Group.specialty == specialty).distinct()
+        )
+        courses = result.scalars().all()
+        return courses
+
+async def get_all_groups(specialty: str, course: str) -> list[str]:
+    async with async_session() as session:
+        result = await session.execute(
+            select(Group.group).where(Group.specialty == specialty, Group.course == course).distinct()
         )
         groups = result.scalars().all()
         return groups
 
-async def get_all_subgroups_by_group(group: str) -> list[str]:
+async def get_all_subgroups(specialty: str, course: str, group: str) -> list[str]:
     async with async_session() as session:
         result = await session.execute(
-            select(Group.subgroup).where(Group.group == group).distinct()
+            select(Group.subgroup).where(Group.specialty == specialty, Group.course == course, Group.group == group).distinct()
         )
         subgroups = result.scalars().all()
         return subgroups

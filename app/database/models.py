@@ -37,6 +37,7 @@ class Group(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     specialty: Mapped[str] = mapped_column(String(20), nullable=False)
+    course: Mapped[str] = mapped_column(String(20), nullable=False)
     group: Mapped[str] = mapped_column(String(20), nullable=False)
     subgroup: Mapped[str] = mapped_column(String(20), nullable=False)
 
