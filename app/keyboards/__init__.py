@@ -5,7 +5,8 @@ from .menu import (
 
 from .profile import (
     profile,
-    settings,
+    settings_with_enable_reminders,
+    settings_with_disable_reminders,
 )
 
 from .schedule import (

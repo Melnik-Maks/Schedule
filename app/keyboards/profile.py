@@ -5,8 +5,14 @@ profile = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='🏠 Додому')]
 ], resize_keyboard=True)
 
-settings = ReplyKeyboardMarkup(keyboard=[
+settings_with_enable_reminders = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='🔄 Змінити групу')],
-    [KeyboardButton(text='⚙️ Нагадування про пари')],
-    [KeyboardButton(text='👤 Профіль')]
+    [KeyboardButton(text='🔔 Вимкнути нагадування')],
+    [KeyboardButton(text='🏠 Додому')]
+], resize_keyboard=True)
+
+settings_with_disable_reminders = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text='🔄 Змінити групу')],
+    [KeyboardButton(text='🔕 Увімкнути нагадування')],
+    [KeyboardButton(text='🏠 Додому')]
 ], resize_keyboard=True)

@@ -16,6 +16,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id: Mapped[int] = mapped_column()
     group_id: Mapped[int] = mapped_column(ForeignKey('groups.id'), nullable=True)
+    reminder: Mapped[bool] = mapped_column()
 
 class Schedule(Base):
     __tablename__ = 'schedule'

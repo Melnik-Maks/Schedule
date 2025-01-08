@@ -37,7 +37,7 @@ async def cmd_start(message: Message):
 @router.message(F.text == '🔄 Змінити групу')
 async def reset_group(message: Message):
     user_group = await user_has_group(message.from_user.id)
-    await message.answer('Виберіть спецвальність', reply_markup=await kb.specialties(user_group))
+    await message.answer('Виберіть спеціальність', reply_markup=await kb.specialties(user_group))
 
 @router.callback_query(F.data.startswith('settings'))
 async def go_back_to_group(callback: CallbackQuery):
@@ -88,14 +88,17 @@ async def schedule(message: Message):
 @router.message(F.text == '👤 Профіль')
 async def schedule(message: Message):
     user = message.from_user
-    response = (
-        f"Ваше ім'я: {user.first_name}\n"
-        f"Ваше прізвище: {user.last_name or 'не вказано'}\n"
-        f"Ваш юзернейм: @{user.username or 'не вказано'}\n"
-        f"Ваш ID: {user.id}\n"
-        f"Ваша група: {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}"
+
+    profile_text = (
+        f"👤 <b>Ваш профіль</b>\n\n"
+        
+        f"⚡️ <b>Ім'я:</b> {user.first_name}\n"
+        f"📛 <b>Нікнейм:</b> @{user.username}\n"
+        f"🆔 <b>ID користувача:</b> {user.id}\n"
+        f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}\n"
     )
-    await message.answer(response, reply_markup=kb.profile)
+
+    await message.answer(profile_text, parse_mode="HTML", reply_markup=kb.profile)
 
 @router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
@@ -117,7 +120,7 @@ async def schedule_for_today(message: Message):
     else:
         day = config.daysOfTheWeek[day_number]
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
-        await send_schedule(message, day, list_of_pairs_for_day, False)
+        await send_schedule(message, day, list_of_pairs_for_day, False, 1)
 
 @router.message(F.text == '📆 Завтра')
 async def schedule_for_tomorrow(message: Message):
@@ -127,7 +130,19 @@ async def schedule_for_tomorrow(message: Message):
     else:
         day = config.daysOfTheWeek[day_number]
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
-        await send_schedule(message, day, list_of_pairs_for_day, False)
+        await send_schedule(message, day, list_of_pairs_for_day, False, 2)
+
+
+@router.message(F.text == '🔔 Вимкнути нагадування')
+async def turn_off_reminders(message: Message):
+    await rq.turn_off_reminders(message.from_user.id)
+    await message.answer('🔕 Нагадування про пари вимкнено!', reply_markup=kb.settings_with_disable_reminders)
+
+
+@router.message(F.text == '🔕 Увімкнути нагадування')
+async def turn_on_reminders(message: Message):
+    await rq.turn_on_reminders(message.from_user.id)
+    await message.answer('🔔 Нагадування про пари увімкнено!', reply_markup=kb.settings_with_enable_reminders)
 
 @router.callback_query(F.data.startswith('day_'))
 async def schedule_for_day(callback: CallbackQuery):
@@ -138,10 +153,16 @@ async def schedule_for_day(callback: CallbackQuery):
 
 @router.message(F.text == '⚙️ Налаштування')
 async def support(message: Message):
-    await message.answer(
-        'Налаштування профілю',
-        reply_markup=kb.settings
-    )
+    if await rq.get_user_reminder(message.from_user.id):
+        await message.answer(
+            'Налаштування профілю',
+            reply_markup=kb.settings_with_enable_reminders
+        )
+    else:
+        await message.answer(
+            'Налаштування профілю',
+            reply_markup=kb.settings_with_disable_reminders
+        )
 
 @router.message(F.text == '⚜️ Підтримка ⚜️')
 async def support(message: Message):
