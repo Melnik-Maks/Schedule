@@ -2,7 +2,7 @@ import gspread
 from sqlalchemy.util import await_fallback
 
 from app.database.models import async_session
-from app.database.models import User, Schedule, Group
+from app.database.models import User, Schedule, Group, Chat
 from sqlalchemy.sql import func
 from sqlalchemy import select
 
@@ -48,6 +48,38 @@ async def add_group(title: str):
             else:
                 print(f"Група {title} вже існує в таблиці Groups.")
 
+async def set_chat(chat_id: int, specialty: str, course: str):
+    async with async_session() as session:
+        async with session.begin():
+            chat_exists = await get_chat_by_chat_id(chat_id)
+
+            if not chat_exists:
+                new_chat = Chat(
+                    chat_id=chat_id,
+                    specialty=specialty,
+                    course=course
+                )
+                session.add(new_chat)
+                await session.commit()
+                print(f"Чат {chat_id} успішно додано до таблиці Chats.")
+            else:
+                print(f"Чат {chat_id} вже існує в таблиці Chats.")
+
+async def get_chat_by_chat_id(chat_id):
+    async with async_session() as session:
+            chat = await session.scalar(select(Chat).where(Chat.chat_id == chat_id))
+            return chat
+
+async def update_chat_group(chat_id: int, specialty: str, course: str) -> None:
+    async with async_session() as session:
+            chat = await get_chat_by_chat_id(chat_id)
+            if chat:
+                chat.specialty = specialty
+                chat.course = course
+                await session.commit()
+                print(f"Для чату {chat_id} успішно оновлено групу {specialty}-{course}")
+            else:
+                print(f"Чату з chat_id={chat_id} не знайдено.")
 
 async def set_schedule(data: list[dict[str, int | float | str]], group_id: int):
     async with async_session() as session:
@@ -70,11 +102,12 @@ async def set_schedule(data: list[dict[str, int | float | str]], group_id: int):
 
 async def set_user(tg_id: int) -> None:
     async with async_session() as session:
-        user = await session.scalar(select(User).where(User.tg_id == tg_id))
+        async with session.begin():
+            user = await session.scalar(select(User).where(User.tg_id == tg_id))
 
-        if not user:
-            session.add(User(tg_id=tg_id, reminder=False))
-            await session.commit()
+            if not user:
+                session.add(User(tg_id=tg_id, reminder=False))
+                await session.commit()
 
 async def user_has_group(tg_id: int) -> bool:
     async with async_session() as session:
@@ -110,7 +143,7 @@ async def get_group_id_by_title(title: str) -> int:
         )
         return result
 
-async def get_user_reminder(tg_id: int) -> bool:
+async def get_user_get_user_reminder(tg_id: int) -> bool:
     async with async_session() as session:
         result = await session.scalar(
             select(User.reminder).where(

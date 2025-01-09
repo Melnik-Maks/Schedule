@@ -1,4 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import BotCommand
 
 menu = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='📅 Розклад')],
@@ -12,3 +13,9 @@ support_button = InlineKeyboardMarkup(
     ]
 )
 
+async def set_bot_commands(bot):
+    commands = [
+        BotCommand(command="/start", description="Запуск ⚡"),
+        BotCommand(command="/group", description="Розклад у групі 🎲"),
+    ]
+    await bot.set_my_commands(commands)

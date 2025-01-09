@@ -30,14 +30,40 @@ async def cmd_start(message: Message):
     is_member = await rq.user_has_group(message.from_user.id)
     if not is_member:
         await message.answer('Привіт, це бот щоб зручно переглядати розклад :)')
-        await message.answer('Спочатку виберіть свою групу ;)\nВиберіть вашу спецвальність', reply_markup=await kb.specialties(is_member))
+        await message.answer('Спочатку виберіть свою групу ;)\nВиберіть вашу спецвальність', reply_markup=await kb.specialties(add_button_go_back=is_member))
     else:
         await message.answer('Виберіть', reply_markup=kb.menu)
 
+@router.message(Command('group'))
+async def group(message: Message):
+    if message.chat.type == "private":
+        await message.answer(
+            "<b>Для того, щоб отримувати актуальний розклад, у вашій групі:</b>\n"
+            "1. Додайте <a href='https://t.me/ScheduleeEbot'>@ScheduleeEbot</a> в спільний чат\n"
+            "2. Потрібно видати права на повідомлення:\n"
+            "<i>(Налаштування чату → Адміністратори → Додати адміністратора → ScheduleeEbot)</i>\n"
+            "3. Прописуємо в чаті <code>/group</code>, вибираємо курс, спеціальність",
+            parse_mode="HTML"
+        )
+    elif message.chat.type in ["group", "supergroup"]:
+        print(message.chat.id)
+        chat = await rq.get_chat_by_chat_id(message.chat.id)
+        if chat:
+            await message.answer(f'Ваша група {chat.specialty} {chat.course} курс. \n'
+                                 f'Якщо ви хочете змінити групу виберіть іншу спеціальність', reply_markup=await kb.specialties(add_button_go_back=True, is_chat=True))
+        else:
+            await message.answer('Виберіть вашу спеціальність', reply_markup=await kb.specialties(False))
+
+@router.callback_query(F.data == 'go_back_to_chat')
+async def go_back_to_group(callback: CallbackQuery):
+    await callback.answer('Ви повернулися назад :)')
+    chat = await rq.get_chat_by_chat_id(callback.message.chat.id)
+    await callback.message.edit_text(f'Ваша група {chat.specialty}-{chat.course}')
+
 @router.message(F.text == '🔄 Змінити групу')
 async def reset_group(message: Message):
-    user_group = await user_has_group(message.from_user.id)
-    await message.answer('Виберіть спеціальність', reply_markup=await kb.specialties(user_group))
+    is_user_in_group = await user_has_group(message.from_user.id)
+    await message.answer('Виберіть спеціальність', reply_markup=await kb.specialties(is_user_in_group))
 
 @router.callback_query(F.data.startswith('settings'))
 async def go_back_to_group(callback: CallbackQuery):
@@ -55,10 +81,19 @@ async def course(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith('group_'))
 async def group(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть вашу групу', reply_markup=await kb.groups(
-        callback.data.split('_')[1],
-        callback.data.split('_')[2]
-    ))
+    if callback.message.chat.type in ["group", "supergroup"]:
+        if await rq.get_chat_by_chat_id(callback.message.chat.id):
+            await rq.update_chat_group(callback.message.chat.id, callback.data.split('_')[1], callback.data.split('_')[2])
+            await callback.message.edit_text('Вашу групу змінено!')
+        else:
+            await rq.set_chat(callback.message.chat.id, callback.data.split('_')[1], callback.data.split('_')[2])
+            await callback.message.edit_text('Вашу групу записано!')
+
+    else:
+        await callback.message.edit_text('Виберіть вашу групу', reply_markup=await kb.groups(
+            callback.data.split('_')[1],
+            callback.data.split('_')[2]
+        ))
 
 @router.callback_query(F.data.startswith('subgroup_'))
 async def subgroup(callback: CallbackQuery):

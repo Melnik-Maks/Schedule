@@ -43,6 +43,14 @@ class Group(Base):
     subgroup: Mapped[str] = mapped_column(String(20), nullable=False)
 
 
+class Chat(Base):
+    __tablename__ = 'chats'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chat_id: Mapped[int] = mapped_column(unique=True, nullable=False)
+    specialty: Mapped[str] = mapped_column(String(20), nullable=False)
+    course: Mapped[str] = mapped_column(String(20), nullable=False)
+
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

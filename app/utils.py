@@ -1,12 +1,14 @@
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.markdown import bold, italic
 
+from aiogram import Bot
+from aiogram.types import ChatMemberAdministrator, ChatMemberOwner
+
 from datetime import datetime, timedelta
 
 from app.keyboards import yesterday_and_tomorrow
 
 from app.database.requests import get_schedules_for_reminders, get_users_by_group_id
-#from main import bot
 
 def day_to_accusative(day: str) -> str:
     if day == 'Середа':
@@ -90,7 +92,7 @@ async def send_reminders(bot):
     end_pair = now + timedelta(minutes=85)
     reminder_time = f'{start_pair.strftime("%H:%M")}-{end_pair.strftime("%H:%M")}'
     print(reminder_time)
-    # Отримуємо пари, які починаються через 5 хвилин
+
     schedules = await get_schedules_for_reminders(reminder_time)
 
     for schedule in schedules:
@@ -113,3 +115,7 @@ async def send_reminders(bot):
         users = await get_users_by_group_id(schedule.group_id)
         for user in users:
             await bot.send_message(user.tg_id, subject_info, parse_mode="HTML")
+
+async def is_bot_admin(bot: Bot, chat_id: int) -> bool:
+    member = await bot.get_chat_member(chat_id, bot.id)
+    return member in [ChatMemberAdministrator, ChatMemberOwner]

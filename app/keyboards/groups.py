@@ -3,13 +3,15 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.database.requests import get_all_specialties, get_all_courses,get_all_groups, get_all_subgroups
 
-async def specialties(add_button_go_back: bool = True):
+async def specialties(add_button_go_back: bool = True, is_chat: bool = False):
     keyboard = InlineKeyboardBuilder()
     all_specialties = await get_all_specialties()
     for specialty in all_specialties:
         keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"course_{specialty}"))
-    if add_button_go_back:
+    if add_button_go_back and not is_chat:
         keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"settings"))
+    elif add_button_go_back:
+        keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"go_back_to_chat"))
     return keyboard.adjust(1).as_markup()
 
 async def courses(specialty: str):

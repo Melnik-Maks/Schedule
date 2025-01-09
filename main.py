@@ -8,6 +8,7 @@ from app.handlers import router
 from app.database.models import async_main
 from app.database.requests import set_db
 from app.utils import send_reminders
+from app.keyboards.menu import set_bot_commands
 
 
 from config import TOKEN
@@ -25,6 +26,8 @@ async def main():
 
     scheduler.add_job(send_reminders, "interval", minutes=1, args=[bot])
     scheduler.start()
+
+    await set_bot_commands(bot)
 
     await dp.start_polling(bot)
 
