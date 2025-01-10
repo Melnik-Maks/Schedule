@@ -26,13 +26,16 @@ class Reg(StatesGroup):
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    await rq.set_user(message.from_user.id)
-    is_member = await rq.user_has_group(message.from_user.id)
-    if not is_member:
-        await message.answer('Привіт, це бот щоб зручно переглядати розклад :)')
-        await message.answer('Спочатку виберіть свою групу ;)\nВиберіть вашу спецвальність', reply_markup=await kb.specialties(add_button_go_back=is_member))
-    else:
-        await message.answer('Виберіть', reply_markup=kb.menu)
+    if message.chat.type == "private":
+        await rq.set_user(message.from_user.id)
+        await message.answer_sticker("CAACAgIAAxUAAWd60zJewJz6pJWWiOPKTYVTpt_vAALNYgACfJOZSrLb9emXVeS9NgQ")
+        await message.answer('<b>Привіт! 👋</b>\nЯ бот, який допоможе тобі зручно переглядати розклад 📅!', parse_mode='HTML', reply_markup=kb.menu)
+
+    elif message.chat.type in ["group", "supergroup"]:
+        await message.answer_sticker("CAACAgIAAxUAAWd60zJewJz6pJWWiOPKTYVTpt_vAALNYgACfJOZSrLb9emXVeS9NgQ")
+        await message.answer('<b>Привіт! 👋</b>\n<i>Я бот, який надсилатиме нагадування про лекції 🛎️!</i>\n'
+                             '<b>📍Спершу потрібно обрати групу, для якої надсилати нагадування.</b>\n🔹 <i>Просто введи команду</i> /group, <i>щоб вибрати або змінити групу!</i>', parse_mode='HTML')
+
 
 @router.message(Command('group'))
 async def group(message: Message):
@@ -43,125 +46,149 @@ async def group(message: Message):
             "2. Потрібно видати права на повідомлення:\n"
             "<i>(Налаштування чату → Адміністратори → Додати адміністратора → ScheduleeEbot)</i>\n"
             "3. Прописуємо в чаті <code>/group</code>, вибираємо курс, спеціальність",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=kb.add_bot_to_chat,
         )
     elif message.chat.type in ["group", "supergroup"]:
-        print(message.chat.id)
         chat = await rq.get_chat_by_chat_id(message.chat.id)
         if chat:
-            await message.answer(f'Ваша група {chat.specialty} {chat.course} курс. \n'
-                                 f'Якщо ви хочете змінити групу виберіть іншу спеціальність', reply_markup=await kb.specialties(add_button_go_back=True, is_chat=True))
+            await message.answer(f'🎓 <b>Оберіть спеціальність:</b>', parse_mode='HTML', reply_markup=await kb.specialties(add_button_go_back=True, is_chat=True))
         else:
-            await message.answer('Виберіть вашу спеціальність', reply_markup=await kb.specialties(False))
+            await message.answer('🎓 <b>Оберіть спеціальність:</b>', reply_markup=await kb.specialties(False), parse_mode='HTML')
 
 @router.callback_query(F.data == 'go_back_to_chat')
 async def go_back_to_group(callback: CallbackQuery):
-    await callback.answer('Ви повернулися назад :)')
+    await callback.answer('🔙 Ви повернулися назад')
     chat = await rq.get_chat_by_chat_id(callback.message.chat.id)
-    await callback.message.edit_text(f'Ваша група {chat.specialty}-{chat.course}')
+    await callback.message.edit_text(f'🎓 Ваша група: {chat.specialty}-{chat.course}{chat.group}')
 
 @router.message(F.text == '🔄 Змінити групу')
 async def reset_group(message: Message):
     is_user_in_group = await user_has_group(message.from_user.id)
-    await message.answer('Виберіть спеціальність', reply_markup=await kb.specialties(is_user_in_group))
+    await message.answer('🎓 Оберіть спеціальність:', reply_markup=await kb.specialties(is_user_in_group))
 
-@router.callback_query(F.data.startswith('settings'))
-async def go_back_to_group(callback: CallbackQuery):
-    await callback.answer('Ви повернулися до налаштувань')
-    await callback.message.edit_text('Налаштування профілю')
+@router.callback_query(F.data == 'profile')
+async def go_back_to_profile(callback: CallbackQuery):
+    await callback.answer('🔙 Ви повернулися в профіль')
+    user = callback.from_user
 
-@router.callback_query(F.data.startswith('specialty'))
+    profile_text = (
+        f"👤 <b>Ваш профіль</b>\n\n"
+
+        f"⚡️ <b>Ім'я:</b> {user.first_name}\n"
+        f"📛 <b>Юзернейм:</b> @{user.username}\n"
+        f"🆔 <b>ID користувача:</b> {user.id}\n"
+        f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}\n"
+    )
+    await callback.message.edit_text(profile_text, parse_mode='HTML')
+
+
+@router.callback_query(F.data == 'specialty')
 async def course(callback: CallbackQuery):
-    user_group = await user_has_group(callback.from_user.id)
-    await callback.message.edit_text('Виберіть спецвальність', reply_markup=await kb.specialties(user_group))
+    if callback.message.chat.type == "private":
+        user_group = await user_has_group(callback.from_user.id)
+        await callback.message.edit_text('🎓 Виберіть вашу спеціальність:', reply_markup=await kb.specialties(user_group))
+    else:
+        await callback.message.edit_text(f'🎓 Виберіть вашу спеціальність:',
+                             reply_markup=await kb.specialties(add_button_go_back=True, is_chat=True))
 
 @router.callback_query(F.data.startswith('course_'))
 async def course(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть ваш курс', reply_markup=await kb.courses(callback.data.split('_')[1]))
+    await callback.message.edit_text('📚 Виберіть ваш курс:', reply_markup=await kb.courses(callback.data.split('_')[1]))
 
 @router.callback_query(F.data.startswith('group_'))
 async def group(callback: CallbackQuery):
-    if callback.message.chat.type in ["group", "supergroup"]:
-        if await rq.get_chat_by_chat_id(callback.message.chat.id):
-            await rq.update_chat_group(callback.message.chat.id, callback.data.split('_')[1], callback.data.split('_')[2])
-            await callback.message.edit_text('Вашу групу змінено!')
-        else:
-            await rq.set_chat(callback.message.chat.id, callback.data.split('_')[1], callback.data.split('_')[2])
-            await callback.message.edit_text('Вашу групу записано!')
-
-    else:
-        await callback.message.edit_text('Виберіть вашу групу', reply_markup=await kb.groups(
-            callback.data.split('_')[1],
-            callback.data.split('_')[2]
-        ))
+    await callback.message.edit_text('👥 Виберіть вашу групу:', reply_markup=await kb.groups(
+        callback.data.split('_')[1],
+        callback.data.split('_')[2]
+    ))
 
 @router.callback_query(F.data.startswith('subgroup_'))
 async def subgroup(callback: CallbackQuery):
-    await callback.message.edit_text('Виберіть вашу підгрупу', reply_markup=await kb.subgroups(
-        callback.data.split('_')[1],
-        callback.data.split('_')[2],
-        callback.data.split('_')[3]
-    ))
+    if callback.message.chat.type in ["group", "supergroup"]:
+        chat = await rq.get_chat_by_chat_id(callback.message.chat.id)
+        if chat:
+            await rq.update_chat_group(callback.message.chat.id, callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3])
+            await callback.message.edit_text(f'✅ Вашу групу змінено на {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
+        else:
+            await rq.set_chat(callback.message.chat.id, callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3])
+            await callback.message.edit_text(f'📄 Вашу групу записано! Ваша група {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
+
+    else:
+        await callback.message.edit_text('🔢 Виберіть вашу підгрупу:', parse_mode='HTML', reply_markup=await kb.subgroups(
+            callback.data.split('_')[1],
+            callback.data.split('_')[2],
+            callback.data.split('_')[3]
+        ))
 
 @router.callback_query(F.data.startswith('setGroup_'))
 async def set_user_group(callback: CallbackQuery):
     if await rq.user_has_group(callback.from_user.id):
-        await rq.update_user_group(callback.from_user.id, callback.data.split('_')[1])
-        await callback.message.edit_text(f'Дякуємо, вашу групу змінено.')
-        await callback.message.answer(f'Ваша нова група {callback.data.split("_")[1]}',
-                                         reply_markup=kb.settings)
+        await callback.message.edit_text(f'📌 Вашу групу змінено')
+        await callback.message.answer(f'🎓 Ваша нова група: {callback.data.split("_")[1]}',
+                                        reply_markup=kb.profile(await rq.get_user_reminder(callback.message.from_user.id)))
     else:
-        await rq.update_user_group(callback.from_user.id, callback.data.split('_')[1])
-        await callback.message.edit_text(f'Дякуємо, вашу групу записано.')
-        await callback.message.answer(f' Ваша група {callback.data.split("_")[1]}',
-                                         reply_markup=kb.menu)
+        await callback.message.edit_text(f'✅ Вашу групу записано')
+        await callback.message.answer(f'🎓 Ваша група: {callback.data.split("_")[1]}', reply_markup=kb.menu)
+    await rq.set_user_group(callback.from_user.id, callback.data.split('_')[1])
 
-@router.message(F.text == '📅 Розклад')
+@router.message(F.text == '📆 Розклад')
 async def schedule(message: Message):
-    await message.answer('Оберіть опцію: ', reply_markup=kb.schedule)
+    is_member = await rq.user_has_group(message.from_user.id)
+    if is_member:
+        await message.answer('🗂 Оберіть опцію з розкладом ', reply_markup=kb.schedule)
+    else:
+        await message.answer('<b>Спочатку обери свою групу 😉</b>', parse_mode='HTML')
+        await message.answer(f'🎓 Виберіть вашу спеціальність:', reply_markup=await kb.specialties(add_button_go_back=is_member))
 
 @router.message(F.text == '👤 Профіль')
-async def schedule(message: Message):
+async def profile(message: Message):
     user = message.from_user
 
     profile_text = (
         f"👤 <b>Ваш профіль</b>\n\n"
         
         f"⚡️ <b>Ім'я:</b> {user.first_name}\n"
-        f"📛 <b>Нікнейм:</b> @{user.username}\n"
+        f"📛 <b>Юзернейм:</b> @{user.username}\n"
         f"🆔 <b>ID користувача:</b> {user.id}\n"
         f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}\n"
     )
 
-    await message.answer(profile_text, parse_mode="HTML", reply_markup=kb.profile)
+    await message.answer(profile_text, parse_mode="HTML", reply_markup=kb.profile(await rq.get_user_reminder(message.from_user.id)))
 
 @router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
-    await message.answer('Ви повернулися в меню', reply_markup=kb.menu)
+    await message.answer('🪬 Ви повернулися в меню', reply_markup=kb.menu)
 
 @router.message(F.text == '📜 Оригінальний розклад')
 async def schedule_for_week(message: Message):
-    await message.answer('Ось оригінальний розклад: ', reply_markup=kb.original_schedule)
+    await message.answer('🧷 Ось оригінальний розклад: ', reply_markup=kb.original_schedule)
 
-@router.message(F.text == '🗓️ Розклад на тиждень')
+@router.message(F.text == '📆 Розклад на тиждень')
 async def schedule_for_week(message: Message):
-    await message.answer('Виберіть день', reply_markup=await kb.days())
+    await message.answer('📅 Виберіть день', reply_markup=await kb.days())
 
-@router.message(F.text == '📆 Сьогодні')
+@router.message(F.text == '📅 Сьогодні')
 async def schedule_for_today(message: Message):
     day_number = message.date.weekday()
     if day_number == 6:
-        await message.answer('В неділю пар немає ;)')
+        await message.answer_sticker(
+            "CAACAgIAAxUAAWd60zJyaJFXLJvhFaxCIq00nZ9DAALAUgACLiKgSoppqBV05QeNNgQ"
+        )
+        await message.answer('😌 В неділю пар немає ;)')
     else:
         day = config.daysOfTheWeek[day_number]
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
         await send_schedule(message, day, list_of_pairs_for_day, False, 1)
 
-@router.message(F.text == '📆 Завтра')
+@router.message(F.text == '📅 Завтра')
 async def schedule_for_tomorrow(message: Message):
     day_number = (message.date.weekday() + 1) % 7
     if day_number == 6:
-        await message.answer('В неділю пар немає ;)')
+        await message.answer_sticker(
+            "CAACAgIAAxUAAWd60zJyaJFXLJvhFaxCIq00nZ9DAALAUgACLiKgSoppqBV05QeNNgQ"
+        )
+        await message.answer('😌 В неділю пар немає ;)')
     else:
         day = config.daysOfTheWeek[day_number]
         list_of_pairs_for_day = await rq.get_schedule_by_day(day, message.from_user.id)
@@ -171,13 +198,13 @@ async def schedule_for_tomorrow(message: Message):
 @router.message(F.text == '🔔 Вимкнути нагадування')
 async def turn_off_reminders(message: Message):
     await rq.turn_off_reminders(message.from_user.id)
-    await message.answer('🔕 Нагадування про пари вимкнено!', reply_markup=kb.settings_with_disable_reminders)
+    await message.answer('🔕 Нагадування про пари вимкнено!', reply_markup=kb.profile(enable_reminder=False))
 
 
 @router.message(F.text == '🔕 Увімкнути нагадування')
 async def turn_on_reminders(message: Message):
     await rq.turn_on_reminders(message.from_user.id)
-    await message.answer('🔔 Нагадування про пари увімкнено!', reply_markup=kb.settings_with_enable_reminders)
+    await message.answer('🔔 Нагадування про пари увімкнено!', reply_markup=kb.profile(enable_reminder=True))
 
 @router.callback_query(F.data.startswith('day_'))
 async def schedule_for_day(callback: CallbackQuery):
@@ -188,17 +215,11 @@ async def schedule_for_day(callback: CallbackQuery):
 
 @router.message(F.text == '⚙️ Налаштування')
 async def support(message: Message):
-    if await rq.get_user_reminder(message.from_user.id):
-        await message.answer(
-            'Налаштування профілю',
-            reply_markup=kb.settings_with_enable_reminders
-        )
-    else:
-        await message.answer(
-            'Налаштування профілю',
-            reply_markup=kb.settings_with_disable_reminders
-        )
-
+    await message.answer(
+        f'🛠 Налаштування профілю',
+        parse_mode = "HTML",
+        reply_markup=kb.settings(await rq.get_user_reminder(message.from_user.id))
+    )
 @router.message(F.text == '⚜️ Підтримка ⚜️')
 async def support(message: Message):
     await message.answer_sticker(

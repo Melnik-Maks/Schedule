@@ -9,7 +9,7 @@ async def specialties(add_button_go_back: bool = True, is_chat: bool = False):
     for specialty in all_specialties:
         keyboard.add(InlineKeyboardButton(text=specialty, callback_data=f"course_{specialty}"))
     if add_button_go_back and not is_chat:
-        keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"settings"))
+        keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"profile"))
     elif add_button_go_back:
         keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"go_back_to_chat"))
     return keyboard.adjust(1).as_markup()

@@ -4,8 +4,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config import daysOfTheWeek
 
 schedule = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='🗓️ Розклад на тиждень')],
-    [KeyboardButton(text='📆 Сьогодні'), KeyboardButton(text='📆 Завтра')],
+    [KeyboardButton(text='📆 Розклад на тиждень')],
+    [KeyboardButton(text='📅 Сьогодні'), KeyboardButton(text='📅 Завтра')],
     [KeyboardButton(text='📜 Оригінальний розклад')],
     [KeyboardButton(text='🏠 Додому')]
 ], resize_keyboard=True)

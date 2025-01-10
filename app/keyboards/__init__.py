@@ -1,12 +1,11 @@
 from .menu import (
     menu,
     support_button,
+    add_bot_to_chat
 )
 
 from .profile import (
     profile,
-    settings_with_enable_reminders,
-    settings_with_disable_reminders,
 )
 
 from .schedule import (

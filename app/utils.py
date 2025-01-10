@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from app.keyboards import yesterday_and_tomorrow
 
-from app.database.requests import get_schedules_for_reminders, get_users_by_group_id
+from app.database.requests import get_schedules_for_reminders, get_users_by_group_id, get_chats_by_group_id
 
 def day_to_accusative(day: str) -> str:
     if day == 'Середа':
@@ -49,7 +49,12 @@ async def send_schedule(destination: Message | CallbackQuery, day: str, schedule
         await message.answer(f"<b>💻 Розклад за {day_to_accusative(day)}:</b>", parse_mode="HTML")
 
     if not schedule:
-        if add_buttons:
+        await message.answer_sticker("CAACAgIAAxUAAWd60zJyaJFXLJvhFaxCIq00nZ9DAALAUgACLiKgSoppqBV05QeNNgQ")
+        if today == 1:
+            await message.answer('На сьогодні немає пар :)')
+        elif today == 2:
+            await message.answer('На завтра немає пар :)')
+        elif add_buttons:
             await message.answer('На цей день немає пар :)', reply_markup=await yesterday_and_tomorrow(day))
         else:
             await message.answer('На цей день немає пар :)')
@@ -110,7 +115,12 @@ async def send_reminders(bot):
 
         if schedule.zoom_link.strip():
             subject_info += f"🔗 <a href='{schedule.zoom_link}'>Перейти до Zoom</a>\n\n"
-        subject_info += "🚦<b>Пара почнеться через 5 хвилин!</b>"
+        subject_info += f"🚦<b>{schedule.type.capitalize()} почнеться через 5 хвилин!</b>"
+
+        if schedule.type.strip().lower() == 'лекція':
+            chats = await get_chats_by_group_id(schedule.group_id)
+            for chat in chats:
+                await bot.send_message(chat.chat_id, subject_info, parse_mode="HTML")
 
         users = await get_users_by_group_id(schedule.group_id)
         for user in users:

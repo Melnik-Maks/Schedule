@@ -50,6 +50,7 @@ class Chat(Base):
     chat_id: Mapped[int] = mapped_column(unique=True, nullable=False)
     specialty: Mapped[str] = mapped_column(String(20), nullable=False)
     course: Mapped[str] = mapped_column(String(20), nullable=False)
+    group: Mapped[str] = mapped_column(String(20), nullable=False)
 
 async def async_main():
     async with engine.begin() as conn:
