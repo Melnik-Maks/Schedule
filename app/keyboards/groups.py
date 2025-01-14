@@ -3,7 +3,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.database.requests import get_all_specialties, get_all_courses,get_all_groups, get_all_subgroups
 
-async def specialties(add_button_go_back: bool = True, is_chat: bool = False):
+async def specialties(add_button_go_back: bool = True, is_chat: bool = False) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     all_specialties = await get_all_specialties()
     for specialty in all_specialties:
@@ -14,7 +14,7 @@ async def specialties(add_button_go_back: bool = True, is_chat: bool = False):
         keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"go_back_to_chat"))
     return keyboard.adjust(1).as_markup()
 
-async def courses(specialty: str):
+async def courses(specialty: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     all_courses = await get_all_courses(specialty)
     for course in all_courses:
@@ -22,7 +22,7 @@ async def courses(specialty: str):
     keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"specialty"))
     return keyboard.adjust(1).as_markup()
 
-async def groups(specialty: str, course: str):
+async def groups(specialty: str, course: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     all_groups = await get_all_groups(specialty, course)
     for group in all_groups:
@@ -30,7 +30,7 @@ async def groups(specialty: str, course: str):
     keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"course_{specialty}"))
     return keyboard.adjust(1).as_markup()
 
-async def subgroups(specialty: str, course: str, group: str):
+async def subgroups(specialty: str, course: str, group: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     all_subgroups = await get_all_subgroups(specialty, course, group)
     for subgroup in all_subgroups:

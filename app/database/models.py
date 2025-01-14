@@ -14,9 +14,10 @@ class User(Base):
     __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tg_id: Mapped[int] = mapped_column()
+    tg_id: Mapped[int] = mapped_column(nullable=False)
     group_id: Mapped[int] = mapped_column(ForeignKey('groups.id'), nullable=True)
-    reminder: Mapped[bool] = mapped_column()
+    reminder: Mapped[bool] = mapped_column(nullable=False)
+    is_admin: Mapped[bool] = mapped_column(nullable=False)
 
 class Schedule(Base):
     __tablename__ = 'schedule'
@@ -51,6 +52,7 @@ class Chat(Base):
     specialty: Mapped[str] = mapped_column(String(20), nullable=False)
     course: Mapped[str] = mapped_column(String(20), nullable=False)
     group: Mapped[str] = mapped_column(String(20), nullable=False)
+
 
 async def async_main():
     async with engine.begin() as conn:

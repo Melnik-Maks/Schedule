@@ -6,6 +6,7 @@ from .menu import (
 
 from .profile import (
     profile,
+
 )
 
 from .schedule import (
@@ -13,6 +14,8 @@ from .schedule import (
     yesterday_and_tomorrow,
     schedule,
     original_schedule,
+    update_schedule,
+    ask_yes_or_no,
 )
 
 from .groups import (

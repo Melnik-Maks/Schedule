@@ -19,17 +19,13 @@ from app.utils import send_schedule
 
 router = Router()
 
-class Reg(StatesGroup):
-    name = State()
-    number = State()
-
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     if message.chat.type == "private":
         await rq.set_user(message.from_user.id)
         await message.answer_sticker("CAACAgIAAxUAAWd60zJewJz6pJWWiOPKTYVTpt_vAALNYgACfJOZSrLb9emXVeS9NgQ")
-        await message.answer('<b>Привіт! 👋</b>\nЯ бот, який допоможе тобі зручно переглядати розклад 📅!', parse_mode='HTML', reply_markup=kb.menu)
+        await message.answer('<b>Привіт! 👋</b>\nЯ бот, який допоможе тобі зручно переглядати розклад 📅!', parse_mode='HTML', reply_markup=await kb.menu(message.from_user.id))
 
     elif message.chat.type in ["group", "supergroup"]:
         await message.answer_sticker("CAACAgIAAxUAAWd60zJewJz6pJWWiOPKTYVTpt_vAALNYgACfJOZSrLb9emXVeS9NgQ")
@@ -83,8 +79,8 @@ async def go_back_to_profile(callback: CallbackQuery):
     await callback.message.edit_text(profile_text, parse_mode='HTML')
 
 
-@router.callback_query(F.data == 'specialty')
-async def course(callback: CallbackQuery):
+@router.callback_query(F.data.startswith('specialty'))
+async def specialty(callback: CallbackQuery):
     if callback.message.chat.type == "private":
         user_group = await user_has_group(callback.from_user.id)
         await callback.message.edit_text('🎓 Виберіть вашу спеціальність:', reply_markup=await kb.specialties(user_group))
@@ -112,7 +108,7 @@ async def subgroup(callback: CallbackQuery):
             await callback.message.edit_text(f'✅ Вашу групу змінено на {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
         else:
             await rq.set_chat(callback.message.chat.id, callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3])
-            await callback.message.edit_text(f'📄 Вашу групу записано! Ваша група {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
+            await callback.message.edit_text(f'📝 Вашу групу записано! Ваша група {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
 
     else:
         await callback.message.edit_text('🔢 Виберіть вашу підгрупу:', parse_mode='HTML', reply_markup=await kb.subgroups(
@@ -129,7 +125,7 @@ async def set_user_group(callback: CallbackQuery):
                                         reply_markup=kb.profile(await rq.get_user_reminder(callback.message.from_user.id)))
     else:
         await callback.message.edit_text(f'✅ Вашу групу записано')
-        await callback.message.answer(f'🎓 Ваша група: {callback.data.split("_")[1]}', reply_markup=kb.menu)
+        await callback.message.answer(f'🎓 Ваша група: {callback.data.split("_")[1]}', reply_markup=await kb.menu(callback.message.from_user.id))
     await rq.set_user_group(callback.from_user.id, callback.data.split('_')[1])
 
 @router.message(F.text == '📆 Розклад')
@@ -158,7 +154,39 @@ async def profile(message: Message):
 
 @router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
-    await message.answer('🪬 Ви повернулися в меню', reply_markup=kb.menu)
+    await message.answer('🪬 Ви повернулися в меню', reply_markup=await kb.menu(message.from_user.id))
+
+@router.message(F.text == '🛠 Оновити розклад 🛠')
+async def update_schedule(message: Message):
+    if message.from_user.id == 722714127:
+        await message.answer('Тут можна оновити розклад з exel', reply_markup=kb.update_schedule)
+    else:
+        await message.answer('Це може зробити тільки адмін')
+
+@router.message(F.text == '🧲 Перезаписати весь розклад 🧲')
+async def set_schedule(message: Message):
+    await message.answer('Попередній розклад буде видалений, ви впевнені?', reply_markup=kb.ask_yes_or_no())
+
+@router.message(F.text == '🔁 Оновити розклад 🔁')
+async def update_schedule(message: Message):
+    await message.answer(f'Ви справді хочете оновити розклад для {await rq.get_group_title_by_user_id(message.from_user.id)}?', reply_markup=kb.ask_yes_or_no())
+
+
+@router.callback_query(F.data.in_(['yes', 'no']))
+async def ask_yes_or_no(callback: CallbackQuery):
+    if callback.data ==  'yes':
+        await callback.answer('🕒Це займе деякий час...')
+        await rq.set_groups()
+        await rq.clear_schedule()
+        await rq.set_schedule()
+        await callback.message.edit_text('Розклад заповнено')
+
+    else:
+        await callback.message.edit_text('Ви повернулися назад')
+        await callback.answer('Ви повернулися назад')
+
+
+
 
 @router.message(F.text == '📜 Оригінальний розклад')
 async def schedule_for_week(message: Message):
@@ -213,13 +241,6 @@ async def schedule_for_day(callback: CallbackQuery):
     list_of_pairs_for_day = await rq.get_schedule_by_day(day, callback.from_user.id)
     await send_schedule(callback, day, list_of_pairs_for_day, True)
 
-@router.message(F.text == '⚙️ Налаштування')
-async def support(message: Message):
-    await message.answer(
-        f'🛠 Налаштування профілю',
-        parse_mode = "HTML",
-        reply_markup=kb.settings(await rq.get_user_reminder(message.from_user.id))
-    )
 @router.message(F.text == '⚜️ Підтримка ⚜️')
 async def support(message: Message):
     await message.answer_sticker(

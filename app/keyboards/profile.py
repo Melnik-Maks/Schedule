@@ -7,7 +7,7 @@ profile1 = ReplyKeyboardMarkup(keyboard=[
 ], resize_keyboard=True)
 
 def profile(enable_reminder: bool = False):
-    keyboard = ReplyKeyboardBuilder([])
+    keyboard = ReplyKeyboardBuilder()
     keyboard.row(KeyboardButton(text='🔄 Змінити групу'))
     if enable_reminder:
         keyboard.row(KeyboardButton(text='🔔 Вимкнути нагадування'))

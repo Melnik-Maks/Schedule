@@ -6,9 +6,11 @@ from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.handlers import router
 from app.database.models import async_main
-from app.database.requests import set_db
+from app.database.requests import set_schedule, set_groups
 from app.utils import send_reminders
 from app.keyboards.menu import set_bot_commands
+
+
 
 
 from config import TOKEN
@@ -21,7 +23,9 @@ scheduler = AsyncIOScheduler()
 
 async def main():
     await async_main()
-    #await set_db()
+
+    #await set_groups()
+    #await set_schedule()
     dp.include_router(router)
 
     scheduler.add_job(send_reminders, "interval", minutes=1, args=[bot])
@@ -37,3 +41,8 @@ if __name__ == '__main__':
         asyncio.run(main())
     except KeyboardInterrupt:
         print('Exit')
+
+"""
+Для адмінів додати кнопку змінити розклад і додати силку на EXEL, та кнопку Оновити розклад
+
+"""

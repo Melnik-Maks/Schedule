@@ -1,11 +1,27 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import BotCommand
 
-menu = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='📆 Розклад')],
-    [KeyboardButton(text='👤 Профіль')],
-    [KeyboardButton(text='⚜️ Підтримка ⚜️')],
-], resize_keyboard=True)
+async def menu(tg_id: int):
+    keyboard = ReplyKeyboardBuilder()
+    keyboard.row(KeyboardButton(text='📆 Розклад'))
+    keyboard.row(KeyboardButton(text='👤 Профіль'))
+    if tg_id == 722714127:
+        keyboard.row(KeyboardButton(text='🛠 Оновити розклад 🛠'))
+    keyboard.row(KeyboardButton(text='⚜️ Підтримка ⚜️'))
+    return keyboard.as_markup(resize_keyboard=True)
+
+def profile(enable_reminder: bool = False):
+    keyboard = ReplyKeyboardBuilder([])
+    keyboard.row(KeyboardButton(text='🔄 Змінити групу'))
+    if enable_reminder:
+        keyboard.row(KeyboardButton(text='🔔 Вимкнути нагадування'))
+    else:
+        keyboard.row(KeyboardButton(text='🔕 Увімкнути нагадування'))
+    keyboard.row(KeyboardButton(text='🏠 Додому'))
+
+
+
 
 support_button = InlineKeyboardMarkup(
     inline_keyboard=[
