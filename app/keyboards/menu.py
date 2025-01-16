@@ -2,12 +2,14 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import BotCommand
 
+from app.database.requests import is_admin
+
 async def menu(tg_id: int):
     keyboard = ReplyKeyboardBuilder()
     keyboard.row(KeyboardButton(text='📆 Розклад'))
     keyboard.row(KeyboardButton(text='👤 Профіль'))
-    if tg_id == 722714127:
-        keyboard.row(KeyboardButton(text='🛠 Оновити розклад 🛠'))
+    if await is_admin(tg_id):
+        keyboard.row(KeyboardButton(text='🛠 Змінити розклад 🛠'))
     keyboard.row(KeyboardButton(text='⚜️ Підтримка ⚜️'))
     return keyboard.as_markup(resize_keyboard=True)
 

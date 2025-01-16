@@ -13,7 +13,7 @@ async def set_groups() -> None:
     worksheets = spreadsheet.worksheets()
 
     for sheet in worksheets:
-        await add_group(sheet.title)
+        await add_group(sheet.title, sheet.id)
 
 
 async def set_schedule() -> None:
@@ -27,19 +27,48 @@ async def set_schedule() -> None:
         group_id = await get_group_id_by_title(title)
         await set_schedule_for_group(data, group_id)
 
+
+
+async def clear_all_subgroups_by_group(group: str):
+    gc = gspread.service_account(filename='creds.json')
+    spreadsheet = gc.open("Schedule")
+    worksheets = spreadsheet.worksheets()
+
+    for sheet in worksheets:
+        if sheet.title[:-2] == group[:-2]:
+            await clear_schedule_for_subgroup(await get_group_id_by_title(sheet.title))
+
+async def set_all_subgroups_by_group(group: str):
+    gc = gspread.service_account(filename='creds.json')
+    spreadsheet = gc.open("Schedule")
+    worksheets = spreadsheet.worksheets()
+
+    subgroups = []
+    for sheet in worksheets:
+        if sheet.title[:-2] == group[:-2]:
+            await set_schedule_for_group(sheet.get_all_records(), await get_group_id_by_title(sheet.title))
+    return subgroups
+
+async def clear_schedule_for_subgroup(group_id: int):
+    async with async_session() as session:
+        async with session.begin():
+            await session.execute(delete(Schedule).where(Schedule.group_id == group_id))
+        await session.commit()
+
 async def clear_schedule():
     async with async_session() as session:
         async with session.begin():
             await session.execute(delete(Schedule))
         await session.commit()
 
-async def add_group(title: str):
+async def add_group(title: str, sheet_id: int):
     specialty, course, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0][0], title.split('-')[1].split('/')[0][1], title.split('/')[1]
 
     async with async_session() as session:
         async with session.begin():
             group_exists = await session.scalar(
                 select(Group).where(
+                    Group.sheet_id == sheet_id,
                     Group.specialty == specialty,
                     Group.course == course,
                     Group.group == group,
@@ -49,6 +78,7 @@ async def add_group(title: str):
 
             if not group_exists:
                 new_group = Group(
+                    sheet_id=sheet_id,
                     specialty=specialty,
                     course=course,
                     group=group,
@@ -70,9 +100,12 @@ async def add_admin(tg_id: int):
             )
 
             if admin:
-                admin.is_admin = True
-                await session.commit()
-                print(f"Користувач {tg_id} успішно додано до адмінів.")
+                if admin.is_admin:
+                    print(f'Користувач {admin.tg_id} вже є адміном')
+                else:
+                    admin.is_admin = True
+                    await session.commit()
+                    print(f"Користувач {tg_id} успішно додано до адмінів.")
             else:
                 print(f"Користувача {tg_id} немає")
 
@@ -87,6 +120,14 @@ async def is_admin(tg_id: int):
         if admin:
             return admin.is_admin
         return None
+
+async def get_sheet_id_by_user_id(tg_id: int):
+    async with async_session() as session:
+        group = await get_group_by_user_id(tg_id)
+        if group:
+            return group.sheet_id
+        else:
+            return 0
 
 async def set_chat(chat_id: int, specialty: str, course: str, group: str):
     async with async_session() as session:
@@ -108,8 +149,8 @@ async def set_chat(chat_id: int, specialty: str, course: str, group: str):
 
 async def get_chat_by_chat_id(chat_id):
     async with async_session() as session:
-            chat = await session.scalar(select(Chat).where(Chat.chat_id == chat_id))
-            return chat
+        chat = await session.scalar(select(Chat).where(Chat.chat_id == chat_id))
+        return chat
 
 async def update_chat_group(chat_id: int, specialty: str, course: str, group: str) -> None:
     async with async_session() as session:
@@ -128,29 +169,18 @@ async def set_schedule_for_group(data: list[dict[str, int | float | str]], group
     async with async_session() as session:
         async with session.begin():
             for record in data:
-                existing_schedule = await session.execute(
-                    select(Schedule).where(
-                        Schedule.group_id == group_id,
-                        Schedule.day == record["День"],
-                        Schedule.time == record["Час"],
-                        Schedule.subject == record["Предмет"]
-                    )
+                schedule = Schedule(
+                    group_id=group_id,
+                    day=record["День"],
+                    time=record["Час"],
+                    subject=record["Предмет"],
+                    type=record["Тип заняття"],
+                    teacher=record["Викладач"],
+                    room=record["Аудиторія"],
+                    zoom_link=record["Посилання (онлайн)"],
+                    weeks=record["Тижні"]
                 )
-                existing_schedule = existing_schedule.scalars().first()
-
-                if not existing_schedule:
-                    schedule = Schedule(
-                        group_id=group_id,
-                        day=record["День"],
-                        time=record["Час"],
-                        subject=record["Предмет"],
-                        type=record["Тип заняття"],
-                        teacher=record["Викладач"],
-                        room=record["Аудиторія"],
-                        zoom_link=record["Посилання (онлайн)"],
-                        weeks=record["Тижні"]
-                    )
-                    session.add(schedule)
+                session.add(schedule)
         await session.commit()
 
 
@@ -160,7 +190,7 @@ async def set_user(tg_id: int) -> None:
             user = await session.scalar(select(User).where(User.tg_id == tg_id))
 
             if not user:
-                session.add(User(tg_id=tg_id, reminder=False, admin=False))
+                session.add(User(tg_id=tg_id, reminder=False, is_admin=False))
                 await session.commit()
 
 async def user_has_group(tg_id: int) -> bool:

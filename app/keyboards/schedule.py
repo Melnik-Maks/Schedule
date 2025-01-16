@@ -1,5 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from config import daysOfTheWeek
 
@@ -14,17 +14,32 @@ original_schedule = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='📊 EXEL', url='https://docs.google.com/spreadsheets/d/1eCEO-7sEocM7HDyafVcW5bI1n1nvu7De7IxD0RFw3cE/pubhtml#')]
 ])
 
-update_schedule = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='🧲 Перезаписати весь розклад 🧲')],
-    [KeyboardButton(text='🔁 Оновити розклад 🔁', callback_data='yes')],
-    [KeyboardButton(text='🏠 Додому')]
-], resize_keyboard=True)
-
-
-def ask_yes_or_no() -> InlineKeyboardMarkup:
+def schedule_in_exel(sheet_id: int):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text='✅ТАК', callback_data='yes'))
-    keyboard.add(InlineKeyboardButton(text='Ні❌', callback_data='no'))
+    keyboard.add(InlineKeyboardButton(text='📊 Перейти в exel', url=f'https://docs.google.com/spreadsheets/d/1gdDNYOR4NW8OWTserIt0kJgSJMVURMBGJWBzbMKHc-s/edit?gid={sheet_id}#gid={sheet_id}'))
+    return keyboard.adjust(1).as_markup()
+
+def update_schedule(tg_id: int):
+    keyboard = ReplyKeyboardBuilder()
+    if tg_id == 722714127:
+        keyboard.row(KeyboardButton(text='🧲 Перезаписати весь розклад 🧲'))
+    keyboard.row(KeyboardButton(text='🖋 Редагувати розклад 🖋'))
+    keyboard.row(KeyboardButton(text='🔁 Оновити розклад 🔁'))
+    keyboard.row(KeyboardButton(text='🏠 Додому'))
+
+    return keyboard.as_markup(resize_keyboard=True)
+
+
+def ask_to_update_all_schedule() -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(InlineKeyboardButton(text='✅ТАК', callback_data='update_all_schedule_yes'))
+    keyboard.add(InlineKeyboardButton(text='Ні❌', callback_data='update_all_schedule_no'))
+    return keyboard.adjust(2).as_markup()
+
+def ask_to_update_schedule_for_one_group() -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(InlineKeyboardButton(text='✅ТАК', callback_data='update_schedule_for_one_group_yes'))
+    keyboard.add(InlineKeyboardButton(text='Ні❌', callback_data='update_schedule_for_one_group_no'))
     return keyboard.adjust(2).as_markup()
 
 async def days() -> InlineKeyboardMarkup:

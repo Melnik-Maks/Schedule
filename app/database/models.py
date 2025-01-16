@@ -38,6 +38,7 @@ class Group(Base):
     __tablename__ = 'groups'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    sheet_id: Mapped[int] = mapped_column(nullable=True)
     specialty: Mapped[str] = mapped_column(String(20), nullable=False)
     course: Mapped[str] = mapped_column(String(20), nullable=False)
     group: Mapped[str] = mapped_column(String(20), nullable=False)

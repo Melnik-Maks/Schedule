@@ -14,7 +14,7 @@ import random
 import app.keyboards as kb
 import app.database.requests as rq
 import config
-from app.database.requests import user_has_group
+from app.database.requests import user_has_group, get_user_group_id_by_tg_id
 from app.utils import send_schedule
 
 router = Router()
@@ -62,6 +62,11 @@ async def go_back_to_group(callback: CallbackQuery):
 async def reset_group(message: Message):
     is_user_in_group = await user_has_group(message.from_user.id)
     await message.answer('🎓 Оберіть спеціальність:', reply_markup=await kb.specialties(is_user_in_group))
+
+@router.message(F.text == '🔮 Обрати групу')
+async def reset_group(message: Message):
+    is_user_in_group = await user_has_group(message.from_user.id)
+    await message.answer('🎓 Оберіть вашу спеціальність:', reply_markup=await kb.specialties(is_user_in_group))
 
 @router.callback_query(F.data == 'profile')
 async def go_back_to_profile(callback: CallbackQuery):
@@ -122,10 +127,10 @@ async def set_user_group(callback: CallbackQuery):
     if await rq.user_has_group(callback.from_user.id):
         await callback.message.edit_text(f'📌 Вашу групу змінено')
         await callback.message.answer(f'🎓 Ваша нова група: {callback.data.split("_")[1]}',
-                                        reply_markup=kb.profile(await rq.get_user_reminder(callback.message.from_user.id)))
+                                        reply_markup=await kb.profile(callback.from_user.id))
     else:
         await callback.message.edit_text(f'✅ Вашу групу записано')
-        await callback.message.answer(f'🎓 Ваша група: {callback.data.split("_")[1]}', reply_markup=await kb.menu(callback.message.from_user.id))
+        await callback.message.answer(f'🎓 Ваша група: {callback.data.split("_")[1]}', reply_markup=await kb.menu(callback.from_user.id))
     await rq.set_user_group(callback.from_user.id, callback.data.split('_')[1])
 
 @router.message(F.text == '📆 Розклад')
@@ -150,31 +155,45 @@ async def profile(message: Message):
         f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}\n"
     )
 
-    await message.answer(profile_text, parse_mode="HTML", reply_markup=kb.profile(await rq.get_user_reminder(message.from_user.id)))
+    await message.answer(profile_text, parse_mode="HTML", reply_markup=await kb.profile(message.from_user.id))
 
 @router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
     await message.answer('🪬 Ви повернулися в меню', reply_markup=await kb.menu(message.from_user.id))
 
-@router.message(F.text == '🛠 Оновити розклад 🛠')
+@router.message(F.text == '🛠 Змінити розклад 🛠')
 async def update_schedule(message: Message):
-    if message.from_user.id == 722714127:
-        await message.answer('Тут можна оновити розклад з exel', reply_markup=kb.update_schedule)
+    if await rq.is_admin(message.from_user.id):
+        await message.answer('Тут можна оновити розклад з exel', reply_markup=kb.update_schedule(message.from_user.id))
     else:
         await message.answer('Це може зробити тільки адмін')
 
 @router.message(F.text == '🧲 Перезаписати весь розклад 🧲')
 async def set_schedule(message: Message):
-    await message.answer('Попередній розклад буде видалений, ви впевнені?', reply_markup=kb.ask_yes_or_no())
+    if message.from_user.id == 722714127:
+        await message.answer('Попередній розклад буде видалений, ви впевнені?', reply_markup=kb.ask_to_update_all_schedule())
+    else:
+        await message.answer(f'Це може зробити тільки адмін')
 
 @router.message(F.text == '🔁 Оновити розклад 🔁')
 async def update_schedule(message: Message):
-    await message.answer(f'Ви справді хочете оновити розклад для {await rq.get_group_title_by_user_id(message.from_user.id)}?', reply_markup=kb.ask_yes_or_no())
+    if await rq.is_admin(message.from_user.id):
+        group_title = await rq.get_group_title_by_user_id(message.from_user.id)
+        await message.answer(f'Ви справді хочете оновити розклад для {group_title[:-2]}?', reply_markup=kb.ask_to_update_schedule_for_one_group())
+    else:
+        await message.answer('Це може зробити тільки адмін')
 
+@router.message(F.text == '🖋 Редагувати розклад 🖋')
+async def set_schedule(message: Message):
+    if await rq.is_admin(message.from_user.id):
+        await message.answer('Тут можна редагувати розклад в exel', reply_markup=kb.schedule_in_exel(await rq.get_sheet_id_by_user_id(message.from_user.id)))
+    else:
+        await message.answer('Це може зробити тільки адмін')
 
-@router.callback_query(F.data.in_(['yes', 'no']))
+@router.callback_query(F.data.startswith('update_all_schedule_'))
 async def ask_yes_or_no(callback: CallbackQuery):
-    if callback.data ==  'yes':
+    result = callback.data.split('_')[-1]
+    if result == 'yes':
         await callback.answer('🕒Це займе деякий час...')
         await rq.set_groups()
         await rq.clear_schedule()
@@ -185,6 +204,20 @@ async def ask_yes_or_no(callback: CallbackQuery):
         await callback.message.edit_text('Ви повернулися назад')
         await callback.answer('Ви повернулися назад')
 
+@router.callback_query(F.data.startswith('update_schedule_for_one_group_'))
+async def ask_yes_or_no(callback: CallbackQuery):
+    result = callback.data.split('_')[-1]
+    if result == 'yes':
+        group_title = await rq.get_group_title_by_user_id(callback.from_user.id)
+        await callback.answer('🕒Це займе деякий час...')
+        await rq.set_groups()
+        await rq.clear_all_subgroups_by_group(group_title)
+        await rq.set_all_subgroups_by_group(group_title)
+        await callback.message.edit_text(f'Розклад заповнено для {group_title[:-2]}')
+
+    else:
+        await callback.message.edit_text('Ви повернулися назад')
+        await callback.answer('Ви повернулися назад')
 
 
 
@@ -226,13 +259,13 @@ async def schedule_for_tomorrow(message: Message):
 @router.message(F.text == '🔔 Вимкнути нагадування')
 async def turn_off_reminders(message: Message):
     await rq.turn_off_reminders(message.from_user.id)
-    await message.answer('🔕 Нагадування про пари вимкнено!', reply_markup=kb.profile(enable_reminder=False))
+    await message.answer('🔕 Нагадування про пари вимкнено!', reply_markup=await kb.profile(message.from_user.id))
 
 
 @router.message(F.text == '🔕 Увімкнути нагадування')
 async def turn_on_reminders(message: Message):
     await rq.turn_on_reminders(message.from_user.id)
-    await message.answer('🔔 Нагадування про пари увімкнено!', reply_markup=kb.profile(enable_reminder=True))
+    await message.answer('🔔 Нагадування про пари увімкнено!', reply_markup=await kb.profile(message.from_user.id))
 
 @router.callback_query(F.data.startswith('day_'))
 async def schedule_for_day(callback: CallbackQuery):
