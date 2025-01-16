@@ -8,12 +8,20 @@ from sqlalchemy import select, delete
 import gspread
 
 async def set_groups() -> None:
-    gc = gspread.service_account(filename='creds.json')
+    gc = gspread.service_account(filename="creds.json")
     spreadsheet = gc.open("Schedule")
     worksheets = spreadsheet.worksheets()
 
     for sheet in worksheets:
-        await add_group(sheet.title, sheet.id)
+        group = await get_group_by_title(sheet.title)
+        if not group:
+            subgroups = sheet.col_values(1)[1:]
+            unique_subgroups = set()
+            for subgroup in subgroups:
+                parts = subgroup.strip().replace(' ', '').split(',')
+                unique_subgroups.update(part for part in parts)
+            list_subgroups = sorted(list(unique_subgroups))
+            await add_group(sheet.title, ','.join(list_subgroups), sheet.id)
 
 
 async def set_schedule() -> None:
@@ -35,8 +43,8 @@ async def clear_all_subgroups_by_group(group: str):
     worksheets = spreadsheet.worksheets()
 
     for sheet in worksheets:
-        if sheet.title[:-2] == group[:-2]:
-            await clear_schedule_for_subgroup(await get_group_id_by_title(sheet.title))
+        if sheet.title == group:
+            await clear_schedule_for_group(await get_group_id_by_title(sheet.title))
 
 async def set_all_subgroups_by_group(group: str):
     gc = gspread.service_account(filename='creds.json')
@@ -45,11 +53,11 @@ async def set_all_subgroups_by_group(group: str):
 
     subgroups = []
     for sheet in worksheets:
-        if sheet.title[:-2] == group[:-2]:
+        if sheet.title == group:
             await set_schedule_for_group(sheet.get_all_records(), await get_group_id_by_title(sheet.title))
     return subgroups
 
-async def clear_schedule_for_subgroup(group_id: int):
+async def clear_schedule_for_group(group_id: int):
     async with async_session() as session:
         async with session.begin():
             await session.execute(delete(Schedule).where(Schedule.group_id == group_id))
@@ -60,10 +68,9 @@ async def clear_schedule():
         async with session.begin():
             await session.execute(delete(Schedule))
         await session.commit()
-
-async def add_group(title: str, sheet_id: int):
-    specialty, course, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0][0], title.split('-')[1].split('/')[0][1], title.split('/')[1]
-
+async def add_group(title: str, subgroups: str, sheet_id: int):
+    specialty, course, group = title.split('-')[0], title.split('-')[1][0], title.split('-')[1][1]
+    await get_group_id_by_title()
     async with async_session() as session:
         async with session.begin():
             group_exists = await session.scalar(
@@ -72,7 +79,6 @@ async def add_group(title: str, sheet_id: int):
                     Group.specialty == specialty,
                     Group.course == course,
                     Group.group == group,
-                    Group.subgroup == subgroup
                 )
             )
 
@@ -82,7 +88,7 @@ async def add_group(title: str, sheet_id: int):
                     specialty=specialty,
                     course=course,
                     group=group,
-                    subgroup=subgroup
+                    subgroups=subgroups,
                 )
                 session.add(new_group)
                 await session.commit()
@@ -129,7 +135,7 @@ async def get_sheet_id_by_user_id(tg_id: int):
         else:
             return 0
 
-async def set_chat(chat_id: int, specialty: str, course: str, group: str):
+async def set_chat(chat_id: int, group_id: int):
     async with async_session() as session:
         async with session.begin():
             chat = await get_chat_by_chat_id(chat_id)
@@ -137,9 +143,7 @@ async def set_chat(chat_id: int, specialty: str, course: str, group: str):
             if not chat:
                 new_chat = Chat(
                     chat_id=chat_id,
-                    specialty=specialty,
-                    course=course,
-                    group=group
+                    group_id=group_id,
                 )
                 session.add(new_chat)
                 await session.commit()
@@ -147,20 +151,18 @@ async def set_chat(chat_id: int, specialty: str, course: str, group: str):
             else:
                 print(f"Чат {chat_id} вже існує в таблиці Chats.")
 
-async def get_chat_by_chat_id(chat_id):
+async def get_chat_by_chat_id(chat_id: int):
     async with async_session() as session:
         chat = await session.scalar(select(Chat).where(Chat.chat_id == chat_id))
         return chat
 
-async def update_chat_group(chat_id: int, specialty: str, course: str, group: str) -> None:
+async def update_chat_group(chat_id: int, group_id: int) -> None:
     async with async_session() as session:
         chat = await session.scalar(select(Chat).where(Chat.chat_id == chat_id))
         if chat:
-            chat.specialty = specialty
-            chat.course = course
-            chat.group = group
+            chat.group_id = group_id
             await session.commit()
-            print(f"Для чату {chat_id} успішно оновлено групу {specialty}-{course}{group}")
+            print(f"Для чату {chat_id} успішно оновлено групу {await get_group_title_by_id(group_id)}")
         else:
             print(f"Чату з chat_id={chat_id} не знайдено.")
 
@@ -169,18 +171,20 @@ async def set_schedule_for_group(data: list[dict[str, int | float | str]], group
     async with async_session() as session:
         async with session.begin():
             for record in data:
-                schedule = Schedule(
-                    group_id=group_id,
-                    day=record["День"],
-                    time=record["Час"],
-                    subject=record["Предмет"],
-                    type=record["Тип заняття"],
-                    teacher=record["Викладач"],
-                    room=record["Аудиторія"],
-                    zoom_link=record["Посилання (онлайн)"],
-                    weeks=record["Тижні"]
-                )
-                session.add(schedule)
+                for subgroup in str(record["Підгрупи"]).strip().replace(' ', '').split(','):
+                    schedule = Schedule(
+                        group_id=group_id,
+                        subgroup=subgroup,
+                        day=record["День"],
+                        time=record["Час"],
+                        subject=record["Предмет"],
+                        type=record["Тип заняття"],
+                        teacher=record["Викладач"],
+                        room=str(record["Аудиторія"]),
+                        zoom_link=record["Посилання"],
+                        weeks=record["Тижні"]
+                    )
+                    session.add(schedule)
         await session.commit()
 
 
@@ -210,7 +214,7 @@ async def get_group_title_by_user_id(tg_id: int) -> str:
         group = result.scalar()
 
         if group:
-            return f"{group.specialty}-{group.course}{group.group}/{group.subgroup}"
+            return f"{group.specialty}-{group.course}{group.group}"
         else:
             return "Групу не знайдено"
 
@@ -222,20 +226,41 @@ async def get_group_title_by_id(group_id: int) -> str:
         group = result.scalar()
 
         if group:
-            return f"{group.specialty}-{group.course}{group.group}/{group.subgroup}"
+            return f"{group.specialty}-{group.course}{group.group}"
         else:
             return "Групу не знайдено"
 
-async def get_group_id_by_title(title: str) -> int:
-    specialty, course, group, subgroup = title.split('-')[0], title.split('-')[1].split('/')[0][0], title.split('-')[1].split('/')[0][1], title.split('/')[1]
+async def get_group_by_title(title: str) -> int:
+    specialty, course, group = title.split('-')[0], title.split('-')[1][0], title.split('-')[1][1],
+    async with async_session() as session:
+        result = await session.scalar(
+            select(Group).where(
+                Group.specialty == specialty,
+                Group.course == course,
+                Group.group == group,
+            )
+        )
+        return result
 
+async def get_group_id_by_title(title: str) -> int:
+    specialty, course, group = title.split('-')[0], title.split('-')[1][0], title.split('-')[1][1],
     async with async_session() as session:
         result = await session.scalar(
             select(Group.id).where(
                 Group.specialty == specialty,
                 Group.course == course,
                 Group.group == group,
-                Group.subgroup == subgroup
+            )
+        )
+        return result
+
+async def get_group_id_by_group(specialty: str, course: str, group: str) -> int:
+    async with async_session() as session:
+        result = await session.scalar(
+            select(Group.id).where(
+                Group.specialty == specialty,
+                Group.course == course,
+                Group.group == group,
             )
         )
         return result
@@ -260,7 +285,7 @@ async def get_user_group_id_by_tg_id(tg_id: int) -> int:
         return result
 
 async def set_user_group(tg_id: int, group_title: str) -> None:
-    group_id = await get_group_id_by_title(group_title)
+    group_id = await get_group_id_by_title(group_title.split('/')[0])
 
     if group_id is None:
         print(f"Групу {group_title} не знайдено.")
@@ -272,6 +297,7 @@ async def set_user_group(tg_id: int, group_title: str) -> None:
 
             if user:
                 user.group_id = group_id
+                user.subgroup = group_title.split('/')[1]
                 await session.commit()
                 print(
                     f"Групу для користувача з tg_id={tg_id} успішно оновлено на group_id={group_id} для групи '{group_title}'.")
@@ -304,12 +330,23 @@ async def turn_on_reminders(tg_id: int) -> None:
             else:
                 print(f"Користувача з tg_id={tg_id} не знайдено.")
 
+async def get_user_subgroup_by_user_id(tg_id: int) -> str:
+    async with async_session() as session:
+        subgroup = await session.scalar(
+            select(User.subgroup).where(User.tg_id == tg_id)
+        )
+        return subgroup
+
 async def get_schedule_by_day(day: str, tg_id: int):
     async with async_session() as session:
+        user_group_id = await get_user_group_id_by_tg_id(tg_id)
+        user_subgroup = await get_user_subgroup_by_user_id(tg_id)
+
         result = await session.execute(
             select(Schedule).where(
                 Schedule.day == day,
-                Schedule.group_id == await get_user_group_id_by_tg_id(tg_id)
+                Schedule.group_id == user_group_id,
+                Schedule.subgroup == user_subgroup,
             )
         )
         schedules = result.scalars().all()
@@ -317,7 +354,7 @@ async def get_schedule_by_day(day: str, tg_id: int):
 
 
 
-async def get_users_by_group_id(group_id: int):
+async def get_users_for_reminder_by_group_id(group_id: int):
     async with async_session() as session:
         result = await session.execute(
             select(User).where(
@@ -350,13 +387,9 @@ async def get_user_by_user_id(user_id: int):
 async def get_chats_by_group_id(group_id: int):
     async with async_session() as session:
 
-        group = await get_group_by_group_id(group_id)
-
         result = await session.execute(
             select(Chat).where(
-                Chat.specialty == group.specialty,
-                Chat.course == group.course,
-                Chat.group == group.group
+                Chat.group_id == group_id,
             )
         )
         chats = result.scalars().all()
@@ -396,8 +429,7 @@ async def get_all_groups(specialty: str, course: str) -> list[str]:
 
 async def get_all_subgroups(specialty: str, course: str, group: str) -> list[str]:
     async with async_session() as session:
-        result = await session.execute(
-            select(Group.subgroup).where(Group.specialty == specialty, Group.course == course, Group.group == group).distinct()
+        subgroups = await session.scalar(
+            select(Group.subgroups).where(Group.specialty == specialty, Group.course == course, Group.group == group)
         )
-        subgroups = result.scalars().all()
-        return subgroups
+        return subgroups.split(',')

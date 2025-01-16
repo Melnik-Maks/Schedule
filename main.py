@@ -25,7 +25,7 @@ async def main():
     await async_main()
     await set_user(722714127)
     await add_admin(722714127)
-    await set_groups()
+    #await set_groups()
     #await set_schedule()
     dp.include_router(router)
 

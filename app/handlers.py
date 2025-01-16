@@ -1,4 +1,5 @@
 from gc import callbacks
+import asyncio
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
@@ -109,10 +110,10 @@ async def subgroup(callback: CallbackQuery):
     if callback.message.chat.type in ["group", "supergroup"]:
         chat = await rq.get_chat_by_chat_id(callback.message.chat.id)
         if chat:
-            await rq.update_chat_group(callback.message.chat.id, callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3])
+            await rq.update_chat_group(callback.message.chat.id, await rq.get_group_id_by_group(callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3]))
             await callback.message.edit_text(f'✅ Вашу групу змінено на {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
         else:
-            await rq.set_chat(callback.message.chat.id, callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3])
+            await rq.set_chat(callback.message.chat.id, await rq.get_group_id_by_group(callback.data.split("_")[1], callback.data.split("_")[2], callback.data.split("_")[3]))
             await callback.message.edit_text(f'📝 Вашу групу записано! Ваша група {callback.data.split("_")[1]}-{callback.data.split("_")[2]}{callback.data.split("_")[3]}')
 
     else:
@@ -152,7 +153,7 @@ async def profile(message: Message):
         f"⚡️ <b>Ім'я:</b> {user.first_name}\n"
         f"📛 <b>Юзернейм:</b> @{user.username}\n"
         f"🆔 <b>ID користувача:</b> {user.id}\n"
-        f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}\n"
+        f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}/{await rq.get_user_subgroup_by_user_id(user.id)}\n"
     )
 
     await message.answer(profile_text, parse_mode="HTML", reply_markup=await kb.profile(message.from_user.id))
@@ -179,7 +180,7 @@ async def set_schedule(message: Message):
 async def update_schedule(message: Message):
     if await rq.is_admin(message.from_user.id):
         group_title = await rq.get_group_title_by_user_id(message.from_user.id)
-        await message.answer(f'Ви справді хочете оновити розклад для {group_title[:-2]}?', reply_markup=kb.ask_to_update_schedule_for_one_group())
+        await message.answer(f'Ви справді хочете оновити розклад для {group_title}?', reply_markup=kb.ask_to_update_schedule_for_one_group())
     else:
         await message.answer('Це може зробити тільки адмін')
 
@@ -193,27 +194,56 @@ async def set_schedule(message: Message):
 @router.callback_query(F.data.startswith('update_all_schedule_'))
 async def ask_yes_or_no(callback: CallbackQuery):
     result = callback.data.split('_')[-1]
+    loading_symbols = ["⏳", "⌛️","⏳", "⌛️", "✅"]
     if result == 'yes':
         await callback.answer('🕒Це займе деякий час...')
         await rq.set_groups()
         await rq.clear_schedule()
         await rq.set_schedule()
-        await callback.message.edit_text('Розклад заповнено')
+        for symbol in loading_symbols:
+            await asyncio.sleep(0.25)
+            await callback.message.edit_text(f"Завантаження... {symbol}")
+        await callback.message.edit_text('Розклад перезаписано ✅')
 
     else:
         await callback.message.edit_text('Ви повернулися назад')
         await callback.answer('Ви повернулися назад')
 
+async def show_loading_animation(callback: CallbackQuery, stop_event: asyncio.Event):
+    loading_symbols = ["⏳", "⌛️"]
+    while not stop_event.is_set():  # Продовжувати, поки stop_event не встановлено
+        for symbol in loading_symbols:
+            if stop_event.is_set():  # Перевірити ще раз перед оновленням повідомлення
+                break
+            await callback.message.edit_text(f"Завантаження... {symbol}")
+            await asyncio.sleep(0.1)  # Час затримки для зміни символа
+
 @router.callback_query(F.data.startswith('update_schedule_for_one_group_'))
 async def ask_yes_or_no(callback: CallbackQuery):
     result = callback.data.split('_')[-1]
+    #loading_symbols = ["🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕧", "🕖", "🕗", "🕘", "🕙", "🕚"]
+    loading_symbols = ["⏳", "⌛️"]
     if result == 'yes':
         group_title = await rq.get_group_title_by_user_id(callback.from_user.id)
         await callback.answer('🕒Це займе деякий час...')
-        await rq.set_groups()
-        await rq.clear_all_subgroups_by_group(group_title)
-        await rq.set_all_subgroups_by_group(group_title)
-        await callback.message.edit_text(f'Розклад заповнено для {group_title[:-2]}')
+
+        # Створення події для зупинки анімації
+        stop_event = asyncio.Event()
+
+        # Запуск анімації у вигляді окремого завдання
+        loading_task = asyncio.create_task(show_loading_animation(callback, stop_event))
+
+        # Виконання основних операцій
+        try:
+            await rq.set_groups()
+            await rq.clear_all_subgroups_by_group(group_title)
+            await rq.set_all_subgroups_by_group(group_title)
+        finally:
+            # Зупинити анімацію після завершення основних операцій
+            stop_event.set()
+            await loading_task  # Дочекатися завершення анімації
+
+        await callback.message.edit_text(f'Розклад заповнено для {group_title}✅')
 
     else:
         await callback.message.edit_text('Ви повернулися назад')

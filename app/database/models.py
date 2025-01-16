@@ -16,6 +16,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id: Mapped[int] = mapped_column(nullable=False)
     group_id: Mapped[int] = mapped_column(ForeignKey('groups.id'), nullable=True)
+    subgroup: Mapped[str] = mapped_column(nullable=True)
     reminder: Mapped[bool] = mapped_column(nullable=False)
     is_admin: Mapped[bool] = mapped_column(nullable=False)
 
@@ -24,6 +25,7 @@ class Schedule(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     group_id: Mapped[int] = mapped_column(ForeignKey('groups.id'))
+    subgroup: Mapped[str] =  mapped_column(String(20), nullable=False)
     day: Mapped[str] = mapped_column(String(20), nullable=False)
     time: Mapped[str] = mapped_column(String(20), nullable=False)
     subject: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -38,21 +40,22 @@ class Group(Base):
     __tablename__ = 'groups'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    sheet_id: Mapped[int] = mapped_column(nullable=True)
+    sheet_id: Mapped[int] = mapped_column(nullable=False)
     specialty: Mapped[str] = mapped_column(String(20), nullable=False)
     course: Mapped[str] = mapped_column(String(20), nullable=False)
     group: Mapped[str] = mapped_column(String(20), nullable=False)
-    subgroup: Mapped[str] = mapped_column(String(20), nullable=False)
-
+    subgroups: Mapped[str] = mapped_column(nullable=False)
 
 class Chat(Base):
     __tablename__ = 'chats'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     chat_id: Mapped[int] = mapped_column(unique=True, nullable=False)
-    specialty: Mapped[str] = mapped_column(String(20), nullable=False)
-    course: Mapped[str] = mapped_column(String(20), nullable=False)
-    group: Mapped[str] = mapped_column(String(20), nullable=False)
+    group_id: Mapped[int] = mapped_column(ForeignKey('groups.id'))
+
+    #specialty: Mapped[str] = mapped_column(String(20), nullable=False)
+    #course: Mapped[str] = mapped_column(String(20), nullable=False)
+    #group: Mapped[str] = mapped_column(String(20), nullable=False)
 
 
 async def async_main():

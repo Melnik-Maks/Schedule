@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from app.keyboards import yesterday_and_tomorrow
 
-from app.database.requests import get_schedules_for_reminders, get_users_by_group_id, get_chats_by_group_id
+from app.database.requests import get_schedules_for_reminders, get_users_for_reminder_by_group_id, get_chats_by_group_id
 
 def day_to_accusative(day: str) -> str:
     if day == 'Середа':
@@ -96,7 +96,6 @@ async def send_reminders(bot):
     start_pair = now + timedelta(minutes=5)
     end_pair = now + timedelta(minutes=85)
     reminder_time = f'{start_pair.strftime("%H:%M")}-{end_pair.strftime("%H:%M")}'
-    print(reminder_time)
 
     schedules = await get_schedules_for_reminders(reminder_time)
 
@@ -122,7 +121,7 @@ async def send_reminders(bot):
             for chat in chats:
                 await bot.send_message(chat.chat_id, subject_info, parse_mode="HTML")
 
-        users = await get_users_by_group_id(schedule.group_id)
+        users = await get_users_for_reminder_by_group_id(schedule.group_id)
         for user in users:
             await bot.send_message(user.tg_id, subject_info, parse_mode="HTML")
 
