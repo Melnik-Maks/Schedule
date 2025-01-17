@@ -34,6 +34,6 @@ async def subgroups(specialty: str, course: str, group: str) -> InlineKeyboardMa
     keyboard = InlineKeyboardBuilder()
     all_subgroups = await get_all_subgroups(specialty, course, group)
     for subgroup in all_subgroups:
-        keyboard.add(InlineKeyboardButton(text=f"{specialty}-{course}{group}/{subgroup}", callback_data=f"setGroup_{specialty}-{course}{group}/{subgroup}"))
+        keyboard.add(InlineKeyboardButton(text=f"{specialty}-{course}{group}/{subgroup}", callback_data=f"set_group_{specialty}-{course}{group}/{subgroup}"))
     keyboard.add(InlineKeyboardButton(text=f"<-", callback_data=f"group_{specialty}_{course}"))
     return keyboard.adjust(1).as_markup()

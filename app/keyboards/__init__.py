@@ -1,7 +1,8 @@
 from .menu import (
     menu,
     support_button,
-    add_bot_to_chat
+    add_bot_to_chat,
+    admins
 )
 
 from .profile import (

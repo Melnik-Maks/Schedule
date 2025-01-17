@@ -2,27 +2,22 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import BotCommand
 
-from app.database.requests import is_admin
-
 async def menu(tg_id: int):
     keyboard = ReplyKeyboardBuilder()
     keyboard.row(KeyboardButton(text='📆 Розклад'))
     keyboard.row(KeyboardButton(text='👤 Профіль'))
-    if await is_admin(tg_id):
-        keyboard.row(KeyboardButton(text='🛠 Змінити розклад 🛠'))
+    if tg_id == 722714127:
+        keyboard.row(KeyboardButton(text='🤿 Адміни'))
+
     keyboard.row(KeyboardButton(text='⚜️ Підтримка ⚜️'))
     return keyboard.as_markup(resize_keyboard=True)
 
-def profile(enable_reminder: bool = False):
-    keyboard = ReplyKeyboardBuilder([])
-    keyboard.row(KeyboardButton(text='🔄 Змінити групу'))
-    if enable_reminder:
-        keyboard.row(KeyboardButton(text='🔔 Вимкнути нагадування'))
-    else:
-        keyboard.row(KeyboardButton(text='🔕 Увімкнути нагадування'))
+async def admins():
+    keyboard = ReplyKeyboardBuilder()
+    keyboard.row(KeyboardButton(text='🏂 Список всіх адмінів'))
+    keyboard.row(KeyboardButton(text='☣️ Додати'), KeyboardButton(text='⛔️ Видалити'))
     keyboard.row(KeyboardButton(text='🏠 Додому'))
-
-
+    return keyboard.as_markup(resize_keyboard=True)
 
 
 support_button = InlineKeyboardMarkup(

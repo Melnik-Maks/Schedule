@@ -115,6 +115,27 @@ async def add_admin(tg_id: int):
             else:
                 print(f"Користувача {tg_id} немає")
 
+async def delete_admin(tg_id: int):
+    async with async_session() as session:
+        async with session.begin():
+            admin = await session.scalar(
+                select(User).where(
+                    User.tg_id == tg_id
+                )
+            )
+
+            if admin:
+                if not admin.is_admin:
+                    print(f'Користувач {admin.tg_id} НЕ є адміном')
+                else:
+                    admin.is_admin = False
+                    await session.commit()
+                    print(f"Користувач {tg_id} успішно видалено з адмінів.")
+            else:
+                print(f"Користувача {tg_id} немає")
+
+
+
 async def is_admin(tg_id: int):
     async with async_session() as session:
         admin = await session.scalar(
@@ -167,6 +188,18 @@ async def update_chat_group(chat_id: int, group_id: int) -> None:
             print(f"Чату з chat_id={chat_id} не знайдено.")
 
 
+async def get_all_admins():
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(
+                User.is_admin == True,
+            )
+        )
+        users = result.scalars().all()
+        return users
+
+
+
 async def set_schedule_for_group(data: list[dict[str, int | float | str]], group_id: int):
     async with async_session() as session:
         async with session.begin():
@@ -175,7 +208,7 @@ async def set_schedule_for_group(data: list[dict[str, int | float | str]], group
                     schedule = Schedule(
                         group_id=group_id,
                         subgroup=subgroup,
-                        day=record["День"],
+                        day=record["День"].capitalize(),
                         time=record["Час"],
                         subject=record["Предмет"],
                         type=record["Тип заняття"],
@@ -228,7 +261,7 @@ async def get_group_title_by_id(group_id: int) -> str:
         if group:
             return f"{group.specialty}-{group.course}{group.group}"
         else:
-            return "Групу не знайдено"
+            return "None"
 
 async def get_group_by_title(title: str) -> int:
     specialty, course, group = title.split('-')[0], title.split('-')[1][0], title.split('-')[1][1],
@@ -344,7 +377,7 @@ async def get_schedule_by_day(day: str, tg_id: int):
 
         result = await session.execute(
             select(Schedule).where(
-                Schedule.day == day,
+                Schedule.day == day.capitalize(),
                 Schedule.group_id == user_group_id,
                 Schedule.subgroup == user_subgroup,
             )

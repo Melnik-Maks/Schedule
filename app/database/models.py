@@ -20,6 +20,7 @@ class User(Base):
     reminder: Mapped[bool] = mapped_column(nullable=False)
     is_admin: Mapped[bool] = mapped_column(nullable=False)
 
+
 class Schedule(Base):
     __tablename__ = 'schedule'
 

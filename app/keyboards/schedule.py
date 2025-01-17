@@ -3,12 +3,19 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from config import daysOfTheWeek
 
-schedule = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='📆 Розклад на тиждень')],
-    [KeyboardButton(text='📅 Сьогодні'), KeyboardButton(text='📅 Завтра')],
-    [KeyboardButton(text='📜 Оригінальний розклад')],
-    [KeyboardButton(text='🏠 Додому')]
-], resize_keyboard=True)
+from app.database.requests import is_admin
+
+async def schedule(tg_id: int):
+    keyboard = ReplyKeyboardBuilder()
+    keyboard.row(KeyboardButton(text='📆 Розклад на тиждень'))
+    keyboard.row(KeyboardButton(text='📅 Сьогодні'), KeyboardButton(text='📅 Завтра'))
+    keyboard.row(KeyboardButton(text='📜 Оригінальний розклад'))
+    if await is_admin(tg_id):
+        keyboard.row(KeyboardButton(text='🛠 Змінити розклад 🛠'))
+    keyboard.row(KeyboardButton(text='🏠 Додому'))
+
+    return keyboard.as_markup(resize_keyboard=True)
+
 
 original_schedule = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='📊 EXEL', url='https://docs.google.com/spreadsheets/d/1eCEO-7sEocM7HDyafVcW5bI1n1nvu7De7IxD0RFw3cE/pubhtml#')]
@@ -46,7 +53,7 @@ async def days() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     for day in daysOfTheWeek:
         keyboard.add(InlineKeyboardButton(text=day, callback_data=f"day_{day}"))
-    return keyboard.adjust(2).as_markup()
+    return keyboard.adjust(3).as_markup()
 
 async def yesterday_and_tomorrow(day: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
