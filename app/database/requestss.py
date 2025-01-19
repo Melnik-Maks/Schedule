@@ -4,58 +4,99 @@ from sqlalchemy.util import await_fallback
 from app.database.models import async_session
 from app.database.models import User, Schedule, Group, Chat
 from sqlalchemy.sql import func
+from typing import List, Dict, Union
 from sqlalchemy import select, delete
 import gspread
 
-async def set_groups() -> None:
-    gc = gspread.service_account(filename="creds.json")
-    spreadsheet = gc.open("Schedule")
-    worksheets = spreadsheet.worksheets()
+from gspread.exceptions import APIError
 
-    for sheet in worksheets:
-        group = await get_group_by_title(sheet.title)
-        if not group:
-            subgroups = sheet.col_values(1)[1:]
-            unique_subgroups = set()
-            for subgroup in subgroups:
-                parts = subgroup.strip().replace(' ', '').split(',')
-                unique_subgroups.update(part for part in parts)
-            list_subgroups = sorted(list(unique_subgroups))
-            await add_group(sheet.title, ','.join(list_subgroups), sheet.id)
+async def set_groups() -> None:
+    try:
+        gc = gspread.service_account(filename="creds.json")
+        spreadsheet = gc.open("Schedule")
+        worksheets = spreadsheet.worksheets()
+
+        for sheet in worksheets:
+            try:
+                group = await get_group_by_title(sheet.title)
+                if not group:
+                    subgroups = sheet.col_values(1)[1:]
+                    unique_subgroups = set()
+                    for subgroup in subgroups:
+                        parts = subgroup.strip().replace(' ', '').split(',')
+                        unique_subgroups.update(part for part in parts)
+                    list_subgroups = sorted(list(unique_subgroups))
+                    await add_group(sheet.title, ','.join(list_subgroups), sheet.id)
+            except Exception as e:
+                print(f"Помилка обробки листа '{sheet.title}': {e}")
+    except FileNotFoundError:
+        print("Файл 'creds.json' не знайдено.")
+    except APIError as api_err:
+        print(f"Помилка API Google Sheets: {api_err}")
+    except Exception as e:
+        print(f"Несподівана помилка в set_groups: {e}")
 
 
 async def set_schedule() -> None:
-    gc = gspread.service_account(filename='creds.json')
-    spreadsheet = gc.open("Schedule")
-    worksheets = spreadsheet.worksheets()
+    try:
+        gc = gspread.service_account(filename="creds.json")
+        spreadsheet = gc.open("Schedule")
+        worksheets = spreadsheet.worksheets()
 
-    for sheet in worksheets:
-        title = sheet.title
-        data = sheet.get_all_records()
-        group_id = await get_group_id_by_title(title)
-        await set_schedule_for_group(data, group_id)
-
-
+        for sheet in worksheets:
+            try:
+                title = sheet.title
+                data = sheet.get_all_records()
+                group_id = await get_group_id_by_title(title)
+                await set_schedule_for_group(data, group_id)
+            except Exception as e:
+                print(f"Помилка обробки розкладу для листа '{sheet.title}': {e}")
+    except FileNotFoundError:
+        print("Файл 'creds.json' не знайдено.")
+    except APIError as api_err:
+        print(f"Помилка API Google Sheets: {api_err}")
+    except Exception as e:
+        print(f"Несподівана помилка в set_schedule: {e}")
 
 async def clear_all_subgroups_by_group(group: str):
-    gc = gspread.service_account(filename='creds.json')
-    spreadsheet = gc.open("Schedule")
-    worksheets = spreadsheet.worksheets()
+    try:
+        gc = gspread.service_account(filename="creds.json")
+        spreadsheet = gc.open("Schedule")
+        worksheets = spreadsheet.worksheets()
 
-    for sheet in worksheets:
-        if sheet.title == group:
-            await clear_schedule_for_group(await get_group_id_by_title(sheet.title))
+        for sheet in worksheets:
+            if sheet.title == group:
+                try:
+                    await clear_schedule_for_group(await get_group_id_by_title(sheet.title))
+                except Exception as e:
+                    print(f"Помилка очищення підгруп для групи '{group}': {e}")
+    except FileNotFoundError:
+        print("Файл 'creds.json' не знайдено.")
+    except APIError as api_err:
+        print(f"Помилка API Google Sheets: {api_err}")
+    except Exception as e:
+        print(f"Несподівана помилка в clear_all_subgroups_by_group: {e}")
+
 
 async def set_all_subgroups_by_group(group: str):
-    gc = gspread.service_account(filename='creds.json')
-    spreadsheet = gc.open("Schedule")
-    worksheets = spreadsheet.worksheets()
+    try:
+        gc = gspread.service_account(filename="creds.json")
+        spreadsheet = gc.open("Schedule")
+        worksheets = spreadsheet.worksheets()
 
-    subgroups = []
-    for sheet in worksheets:
-        if sheet.title == group:
-            await set_schedule_for_group(sheet.get_all_records(), await get_group_id_by_title(sheet.title))
-    return subgroups
+        for sheet in worksheets:
+            if sheet.title == group:
+                try:
+                    await set_schedule_for_group(sheet.get_all_records(), await get_group_id_by_title(sheet.title))
+                except Exception as e:
+                    print(f"Помилка встановлення підгруп для групи '{group}': {e}")
+    except FileNotFoundError:
+        print("Файл 'creds.json' не знайдено.")
+    except APIError as api_err:
+        print(f"Помилка API Google Sheets: {api_err}")
+    except Exception as e:
+        print(f"Несподівана помилка в set_all_subgroups_by_group: {e}")
+
 
 async def clear_schedule_for_group(group_id: int):
     async with async_session() as session:
@@ -68,9 +109,9 @@ async def clear_schedule():
         async with session.begin():
             await session.execute(delete(Schedule))
         await session.commit()
+
 async def add_group(title: str, subgroups: str, sheet_id: int):
     specialty, course, group = title.split('-')[0], title.split('-')[1][0], title.split('-')[1][1]
-    await get_group_id_by_title()
     async with async_session() as session:
         async with session.begin():
             group_exists = await session.scalar(
@@ -200,7 +241,7 @@ async def get_all_admins():
 
 
 
-async def set_schedule_for_group(data: list[dict[str, int | float | str]], group_id: int):
+async def set_schedule_for_group(data: List[Dict[str, Union[int, float, str]]], group_id: int):
     async with async_session() as session:
         async with session.begin():
             for record in data:
@@ -345,8 +386,7 @@ async def turn_off_reminders(tg_id: int) -> None:
             if user:
                 user.reminder = False
                 await session.commit()
-                print(
-                    f"Для користувача з tg_id={tg_id} успішно вимкнено нагадування про пари.")
+                print(f"Для користувача з tg_id={tg_id} успішно вимкнено нагадування про пари.")
             else:
                 print(f"Користувача з tg_id={tg_id} не знайдено.")
 
@@ -358,8 +398,7 @@ async def turn_on_reminders(tg_id: int) -> None:
             if user:
                 user.reminder = True
                 await session.commit()
-                print(
-                    f"Для користувача з tg_id={tg_id} успішно увімкнено нагадування про пари.")
+                print(f"Для користувача з tg_id={tg_id} успішно увімкнено нагадування про пари.")
             else:
                 print(f"Користувача з tg_id={tg_id} не знайдено.")
 

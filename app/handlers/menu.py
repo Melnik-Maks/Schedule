@@ -31,7 +31,7 @@ async def set_schedule(message: Message):
 
 @router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
-    await message.answer_sticker("CAACAgIAAxUAAWd60zJZX7paW9emaruC3GUDE1sfAALTaAACuhuhSk8v33wo90hcNgQ")
+    #await message.answer_sticker("CAACAgIAAxUAAWd60zJZX7paW9emaruC3GUDE1sfAALTaAACuhuhSk8v33wo90hcNgQ")
     await message.answer('🪬 Ви повернулися в меню', reply_markup=await kb.menu(message.from_user.id))
 
 @router.message(F.text == '⚜️ Підтримка ⚜️')

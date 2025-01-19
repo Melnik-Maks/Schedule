@@ -20,6 +20,9 @@ def day_to_accusative(day: str) -> str:
     return day
 
 def check_dates(dates: str, date: str) -> bool:
+    if not dates.strip():
+        return True
+
     periods = dates.split(',')
     for i in periods:
         if i.find('-') == -1:
