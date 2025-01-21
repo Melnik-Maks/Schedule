@@ -19,6 +19,7 @@ class User(Base):
     subgroup: Mapped[int] = mapped_column(nullable=True)
     reminder: Mapped[bool] = mapped_column(nullable=False)
     is_admin: Mapped[bool] = mapped_column(nullable=False)
+    sticker_id: Mapped[str] = mapped_column(nullable=False)
 
 
 class Schedule(Base):

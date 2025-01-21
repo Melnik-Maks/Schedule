@@ -24,9 +24,8 @@ router = Router()
 
 @router.message(F.text == '👤 Профіль')
 async def profile(message: Message):
-    await message.answer_sticker("CAACAgIAAxUAAWd60zKLGbCvARh333fpBlcYN0SVAAIbZQACFGSgSmnVgQpCm1f3NgQ")
     user = message.from_user
-
+    await message.answer_sticker(await rq.get_user_sticker_id(user.id))
     profile_text = (
         f"👤 <b>Ваш профіль</b>\n\n"
 

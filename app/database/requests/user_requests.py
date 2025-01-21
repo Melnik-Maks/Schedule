@@ -4,6 +4,8 @@ from sqlalchemy.sql import func
 from typing import List, Dict, Union
 from sqlalchemy import select, delete
 import gspread
+import random
+from config import stickers
 
 
 async def add_admin(tg_id: int):
@@ -67,13 +69,25 @@ async def get_all_admins():
         return users
 
 async def set_user(tg_id: int) -> None:
+    random_sticker_id = random.choice(stickers)
     async with async_session() as session:
         async with session.begin():
             user = await session.scalar(select(User).where(User.tg_id == tg_id))
 
             if not user:
-                session.add(User(tg_id=tg_id, reminder=False, is_admin=False))
+                session.add(User(tg_id=tg_id, reminder=False, is_admin=False, sticker_id=random_sticker_id))
                 await session.commit()
+
+async def get_user_sticker_id(tg_id: int) -> str:
+    async with async_session() as session:
+        sticker_id = await session.scalar(
+            select(User.sticker_id).where(
+                User.tg_id == tg_id
+            )
+        )
+        if not sticker_id:
+            return 'CAACAgIAAxUAAWd60zKLGbCvARh333fpBlcYN0SVAAIbZQACFGSgSmnVgQpCm1f3NgQ'
+        return sticker_id
 
 async def user_has_group(tg_id: int) -> bool:
     async with async_session() as session:
