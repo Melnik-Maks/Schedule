@@ -116,7 +116,7 @@ async def set_user_group(tg_id: int, group_title: str) -> None:
 
             if user:
                 user.group_id = group_id
-                user.subgroup = group_title.split('/')[1]
+                user.subgroup = int(group_title.split('/')[1])
                 await session.commit()
                 print(
                     f"Групу для користувача з tg_id={tg_id} успішно оновлено на group_id={group_id} для групи '{group_title}'.")
@@ -147,7 +147,7 @@ async def turn_on_reminders(tg_id: int) -> None:
             else:
                 print(f"Користувача з tg_id={tg_id} не знайдено.")
 
-async def get_user_subgroup_by_user_id(tg_id: int) -> str:
+async def get_user_subgroup_by_user_id(tg_id: int) -> int:
     async with async_session() as session:
         subgroup = await session.scalar(
             select(User.subgroup).where(User.tg_id == tg_id)

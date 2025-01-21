@@ -10,14 +10,13 @@ from app.database.requests import add_admin, set_user, set_groups
 from app.utils import send_reminders
 from app.keyboards.menu import set_bot_commands
 
-from app.handlers.commands import router as commands_router
-from app.handlers.groups import router as groups_router
-from app.handlers.menu import router as menu_router
-from app.handlers.profile import router as profile_router
-from app.handlers.schedule import router as schedule_router
-
-
-
+from app.handlers import (
+    commands_router,
+    groups_router,
+    menu_router,
+    profile_router,
+    schedule_router
+)
 
 from config import TOKEN
 

@@ -65,10 +65,11 @@ async def set_schedule_for_group(data: List[Dict[str, Union[int, float, str]]], 
     async with async_session() as session:
         async with session.begin():
             for record in data:
-                for subgroup in str(record["Підгрупи"]).strip().replace(' ', '').split(','):
+                subgroups = str(record["Підгрупи"]).strip().replace(' ', '').split(',')
+                for subgroup in subgroups:
                     schedule = Schedule(
                         group_id=group_id,
-                        subgroup=subgroup,
+                        subgroup=int(subgroup),
                         day=record["День"].capitalize(),
                         time=record["Час"],
                         subject=record["Предмет"],
@@ -76,7 +77,8 @@ async def set_schedule_for_group(data: List[Dict[str, Union[int, float, str]]], 
                         teacher=record["Викладач"],
                         room=str(record["Аудиторія"]),
                         zoom_link=record["Посилання"],
-                        weeks=record["Тижні"]
+                        weeks=record["Тижні"],
+                        alternation=(record["Ч/Т"].strip().lower() == "ч/т")
                     )
                     session.add(schedule)
         await session.commit()

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from app.keyboards import yesterday_and_tomorrow
 
-from app.database.requests import get_schedules_for_reminders, get_users_for_reminder_by_group_id, get_chats_by_group_id
+from app.database.requests import get_schedules_for_reminders, get_users_for_reminder_by_group_id, get_chats_by_group_id, get_schedule_by_day
 
 def day_to_accusative(day: str) -> str:
     if day == 'Середа':
@@ -19,9 +19,10 @@ def day_to_accusative(day: str) -> str:
         return 'Суботу'
     return day
 
-def check_dates(dates: str, date: str) -> bool:
+def check_dates(dates: str, alternation: bool) -> bool:
     if not dates.strip():
         return True
+    date = datetime.now()
 
     periods = dates.split(',')
     for i in periods:
@@ -30,24 +31,38 @@ def check_dates(dates: str, date: str) -> bool:
                 return True
         else:
             l, r = i.lstrip().rstrip().split('-')
-            if date_comparison(l, date) and date_comparison(date, r):
+            if date_comparison(l, date.strftime("%d.%m")) and date_comparison(date.strftime("%d.%m"), r):
+                if alternation:
+                    date2 = datetime.strptime(f"{date.year}.{l}", "%Y.%d.%m")
+                    difference = (date - date2).days
+                    return difference % 14 == 0
                 return True
     return False
+
+def check_alternation(date2: str):
+    date = datetime.now()
+    date2 = datetime.strptime(f"{date.year}.{date2}", "%y.%d.%m")
+    print(date2)
+    print(date)
+    difference = (date - date2).days
+    return difference % 14 == 0
 
 def date_comparison(a: str, b: str) -> bool:
     d1, m1 = a.split('.')
     d2, m2 = b.split('.')
-    if m1 != m2:
-        return m1 < m2
-    return d1 <= d2
+    if int(m1) != int(m2):
+        return int(m1) < int(m2)
+    return int(d1) <= int(d2)
 
 
 
 
-async def send_schedule(destination: Message | CallbackQuery, day: str, schedule: list, add_buttons: bool, today = 0) -> None:
+async def send_schedule(destination: Message | CallbackQuery, tg_id: int, day: str, add_buttons: bool, today: int = 0) -> None:
     message = destination.message if isinstance(destination, CallbackQuery) else destination
+    schedule = await get_schedule_by_day(day, tg_id)
 
     schedule.sort(key=lambda x: int(x.time.split('-')[0].replace(':', '')))
+
     if today == 0:
         await message.answer(f"<b>💻 Розклад за {day_to_accusative(day)}:</b>", parse_mode="HTML")
 
@@ -64,29 +79,36 @@ async def send_schedule(destination: Message | CallbackQuery, day: str, schedule
     else:
         pair_count = 0
         for i in range(len(schedule)):
-            subject_info = ''
-            #subject_info += f"<b>❌На цей день цієї пари немає ❌</b>\n\n"
-            if not(not add_buttons and not check_dates(schedule[i].weeks, message.date.now().strftime("%d.%m"))):
+            subject_info = (
+                f"📚 <b>{schedule[i].subject}</b>\n"
+                f"⏰ <i>{schedule[i].time}</i>\n"
+                f"📖 <i>{schedule[i].type.capitalize()}</i>\n"
+                f"👨‍🏫 {schedule[i].teacher}\n"
+            )
+
+            if schedule[i].room.strip():
+                subject_info += f"🏫 {schedule[i].room}\n"
+            subject_info += f"🗓️ {schedule[i].weeks}"
+
+            if schedule[i].alternation:
+                subject_info += f" <b>ч/т</b>"
+            subject_info += "\n"
+
+            if schedule[i].zoom_link.strip():
+                subject_info += f"🔗 <a href='{schedule[i].zoom_link}'>Перейти до Zoom</a>\n"
+
+            print(check_dates(schedule[i].weeks, schedule[i].alternation))
+            print()
+            if add_buttons and i == len(schedule) - 1:
+                await message.answer(subject_info, parse_mode="HTML", reply_markup=await yesterday_and_tomorrow(day),
+                                     disable_web_page_preview=True)
+            elif add_buttons:
+                await message.answer(subject_info, parse_mode="HTML", disable_web_page_preview=True)
+            elif check_dates(schedule[i].weeks, schedule[i].alternation):
                 pair_count += 1
-                subject_info += (
-                    f"📚 <b>{schedule[i].subject}</b>\n"
-                    f"⏰ <i>{schedule[i].time}</i>\n"
-                    f"📖 <i>{schedule[i].type.capitalize()}</i>\n"
-                    f"👨‍🏫 {schedule[i].teacher}\n"
-                )
+                await message.answer(subject_info, parse_mode="HTML", disable_web_page_preview=True)
 
-                if schedule[i].room.strip():
-                    subject_info += f"🏫 {schedule[i].room}\n"
-                subject_info += f"🗓️ {schedule[i].weeks}\n"
-
-                if schedule[i].zoom_link.strip():
-                    subject_info += f"🔗 <a href='{schedule[i].zoom_link}'>Перейти до Zoom</a>\n"
-
-                if add_buttons and i == len(schedule) - 1:
-                    await message.answer(subject_info, parse_mode="HTML", reply_markup=await yesterday_and_tomorrow(day), disable_web_page_preview=True)
-                else:
-                    await message.answer(subject_info, parse_mode="HTML", disable_web_page_preview=True)
-        if not pair_count:
+        if not add_buttons and not pair_count:
             await message.answer_sticker("CAACAgIAAxUAAWd60zJyaJFXLJvhFaxCIq00nZ9DAALAUgACLiKgSoppqBV05QeNNgQ")
             if today == 1:
                 await message.answer('На сьогодні немає пар :)')

@@ -25,13 +25,14 @@ router = Router()
 @router.message(F.text == '🤿 Адміни')
 async def set_schedule(message: Message):
     if message.from_user.id == 722714127:
+        await message.answer_sticker("CAACAgIAAxUAAWd60zJ95DTj3m7st3mKfNLHMpgpAAL8YQACLV-hSnFMBpVtgy_NNgQ")
         await message.answer('Тут можна видалити або додати адмінів', reply_markup=await kb.admins())
     else:
         await message.answer(f'Ви не маєте доступу')
 
 @router.message(F.text == '🏠 Додому')
 async def schedule_for_week(message: Message):
-    #await message.answer_sticker("CAACAgIAAxUAAWd60zJZX7paW9emaruC3GUDE1sfAALTaAACuhuhSk8v33wo90hcNgQ")
+    await message.answer_sticker("CAACAgIAAxUAAWd60zJT-ffa4d6WVmN-FAJsmgABkQACI1sAAnjXoEo52beO77VqaTYE")
     await message.answer('🪬 Ви повернулися в меню', reply_markup=await kb.menu(message.from_user.id))
 
 @router.message(F.text == '⚜️ Підтримка ⚜️')
