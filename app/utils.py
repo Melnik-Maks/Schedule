@@ -42,8 +42,7 @@ def check_dates(dates: str, alternation: bool) -> bool:
 def check_alternation(date2: str):
     date = datetime.now()
     date2 = datetime.strptime(f"{date.year}.{date2}", "%y.%d.%m")
-    print(date2)
-    print(date)
+
     difference = (date - date2).days
     return difference % 14 == 0
 
@@ -97,8 +96,6 @@ async def send_schedule(destination: Message | CallbackQuery, tg_id: int, day: s
             if schedule[i].zoom_link.strip():
                 subject_info += f"🔗 <a href='{schedule[i].zoom_link}'>Перейти до Zoom</a>\n"
 
-            print(check_dates(schedule[i].weeks, schedule[i].alternation))
-            print()
             if add_buttons and i == len(schedule) - 1:
                 await message.answer(subject_info, parse_mode="HTML", reply_markup=await yesterday_and_tomorrow(day),
                                      disable_web_page_preview=True)
