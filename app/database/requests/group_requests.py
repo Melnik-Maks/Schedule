@@ -5,6 +5,8 @@ from typing import List, Dict, Union
 from sqlalchemy import select, delete
 import gspread
 
+from typing import List
+
 
 from gspread.exceptions import APIError
 
@@ -165,13 +167,13 @@ async def get_group_by_group_id(group_id: int):
         group = await session.scalar(select(Group).where(Group.id == group_id))
         return group
 
-async def get_all_specialties() -> list[str]:
+async def get_all_specialties() -> List[str]:
     async with async_session() as session:
         result = await session.execute(select(Group.specialty).distinct())
         specialties = result.scalars().all()
         return specialties
 
-async def get_all_courses(specialty: str) -> list[str]:
+async def get_all_courses(specialty: str) -> List[str]:
     async with async_session() as session:
         result = await session.execute(
             select(Group.course).where(Group.specialty == specialty).distinct()
@@ -179,7 +181,7 @@ async def get_all_courses(specialty: str) -> list[str]:
         courses = result.scalars().all()
         return courses
 
-async def get_all_groups(specialty: str, course: str) -> list[str]:
+async def get_all_groups(specialty: str, course: str) -> List[str]:
     async with async_session() as session:
         result = await session.execute(
             select(Group.group).where(Group.specialty == specialty, Group.course == course).distinct()
@@ -187,7 +189,7 @@ async def get_all_groups(specialty: str, course: str) -> list[str]:
         groups = result.scalars().all()
         return groups
 
-async def get_all_subgroups(specialty: str, course: str, group: str) -> list[str]:
+async def get_all_subgroups(specialty: str, course: str, group: str) -> List[str]:
     async with async_session() as session:
         subgroups = await session.scalar(
             select(Group.subgroups).where(Group.specialty == specialty, Group.course == course, Group.group == group)
