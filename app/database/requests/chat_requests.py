@@ -45,6 +45,7 @@ async def get_chats_by_group_id(group_id: int):
         result = await session.execute(
             select(Chat).where(
                 Chat.group_id == group_id,
+
             )
         )
         chats = result.scalars().all()

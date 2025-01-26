@@ -53,7 +53,7 @@ async def days() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     for day in daysOfTheWeek:
         keyboard.add(InlineKeyboardButton(text=day, callback_data=f"day_{day}"))
-    return keyboard.adjust(3).as_markup()
+    return keyboard.adjust(2).as_markup()
 
 async def yesterday_and_tomorrow(day: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()

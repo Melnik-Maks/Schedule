@@ -4,13 +4,6 @@ import asyncio
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.utils.markdown import bold, italic, code
-from aiogram.fsm.context import FSMContext
-from pyasn1_modules.rfc8018 import algid_hmacWithSHA1
-from sqlalchemy.util import await_fallback
-import random
-
 
 
 import app.keyboards as kb

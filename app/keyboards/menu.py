@@ -8,7 +8,7 @@ async def menu(tg_id: int):
     keyboard.row(KeyboardButton(text='👤 Профіль'))
     if tg_id == 722714127:
         keyboard.row(KeyboardButton(text='🤿 Адміни'))
-
+    #KeyboardButton(text='💸 Донати')
     keyboard.row(KeyboardButton(text='⚜️ Підтримка ⚜️'))
     return keyboard.as_markup(resize_keyboard=True)
 
@@ -22,7 +22,7 @@ async def admins():
 
 support_button = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Написати в підтримку", url="https://t.me/maksmyser")],
+        [InlineKeyboardButton(text="Написати", url="https://t.me/maksmyser")],
     ]
 )
 
