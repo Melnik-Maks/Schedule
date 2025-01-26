@@ -4,12 +4,6 @@ import asyncio
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.utils.markdown import bold, italic, code
-from aiogram.fsm.context import FSMContext
-from pyasn1_modules.rfc8018 import algid_hmacWithSHA1
-from sqlalchemy.util import await_fallback
-import random
 
 
 
@@ -35,7 +29,7 @@ async def schedule(message: Message):
 @router.message(F.text == '🛠 Змінити розклад 🛠')
 async def update_schedule(message: Message):
     if await rq.is_admin(message.from_user.id):
-        await message.answer('✏️ Тут можна оновити розклад з EXEL', reply_markup=kb.update_schedule(message.from_user.id))
+        await message.answer('✏️ Тут можна оновити розклад', reply_markup=kb.update_schedule(message.from_user.id))
     else:
         await message.answer('Це може зробити тільки адмін')
 
@@ -57,7 +51,7 @@ async def update_schedule(message: Message):
 @router.message(F.text == '🖋 Редагувати розклад 🖋')
 async def set_schedule(message: Message):
     if await rq.is_admin(message.from_user.id):
-        await message.answer('🖍 Тут можна редагувати розклад в EXEL', reply_markup=kb.schedule_in_exel(await rq.get_sheet_id_by_user_id(message.from_user.id)))
+        await message.answer('🖍 Тут можна редагувати розклад', reply_markup=kb.schedule_in_exel(await rq.get_sheet_id_by_user_id(message.from_user.id)))
     else:
         await message.answer('🔎 Це може зробити тільки адмін')
 
@@ -77,8 +71,8 @@ async def ask_yes_or_no(callback: CallbackQuery):
         await callback.message.edit_text('Розклад успішно перезаписано ✅')
 
     else:
-        await callback.message.edit_text('Ви повернулися назад')
-        await callback.answer('Ви повернулися назад')
+        await callback.message.edit_text('🔙Ви повернулися назад')
+        await callback.answer('🔙Ви повернулися назад')
 
 
 @router.callback_query(F.data.startswith('update_schedule_for_one_group_'))
@@ -99,8 +93,8 @@ async def ask_yes_or_no(callback: CallbackQuery):
         await callback.message.edit_text(f'Розклад оновлено успішно для {group_title} ✅')
 
     else:
-        await callback.message.edit_text('Ви повернулися назад')
-        await callback.answer('Ви повернулися назад')
+        await callback.message.edit_text('🔙Ви повернулися назад')
+        await callback.answer('🔙Ви повернулися назад')
 
 
 @router.message(F.text == '📜 Оригінальний розклад')

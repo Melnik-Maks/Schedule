@@ -1,15 +1,7 @@
-from gc import callbacks
-import asyncio
-
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.utils.markdown import bold, italic, code
-from aiogram.fsm.context import FSMContext
-from pyasn1_modules.rfc8018 import algid_hmacWithSHA1
-from sqlalchemy.util import await_fallback
-import random
+
 
 
 
@@ -21,6 +13,10 @@ from app.utils import send_schedule
 
 router = Router()
 
+@router.message(F.text == '💸 Донати')
+async def set_schedule(message: Message):
+    #await message.answer_sticker("CAACAgIAAxUAAWd60zJ95DTj3m7st3mKfNLHMpgpAAL8YQACLV-hSnFMBpVtgy_NNgQ")
+    await message.answer('Тут можна видалити або додати адмінів', reply_markup=await kb.admins())
 
 @router.message(F.text == '🤿 Адміни')
 async def set_schedule(message: Message):
@@ -45,4 +41,4 @@ async def support(message: Message):
 @router.message(F.sticker)
 async def get_sticker_id(message: Message):
     sticker = message.sticker
-    await message.reply(f"'{sticker.file_id}',")
+    await message.reply(f"File ID цього стікера: {sticker.file_id}")

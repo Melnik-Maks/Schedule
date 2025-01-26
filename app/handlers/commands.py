@@ -4,14 +4,7 @@ import asyncio
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.utils.markdown import bold, italic, code
-from aiogram.fsm.context import FSMContext
-from pyasn1_modules.rfc8018 import algid_hmacWithSHA1
-from sqlalchemy.util import await_fallback
-import random
-
-
+from cachetools.func import mru_cache
 
 import app.keyboards as kb
 import app.database.requests as rq
@@ -55,42 +48,64 @@ async def group(message: Message):
 
 @router.message(Command('add'))
 async def add_admin(message: Message):
-    from main import bot
-    user_id_str = message.text[4:].strip()
-    if user_id_str.isdigit():
-        user_id = int(user_id_str)
-        user_exist = await rq.get_user_by_user_id(user_id)
-        if user_exist:
-            user = await bot.get_chat(user_id_str)
-            if not user_exist.is_admin:
-                await rq.add_admin(user_id)
+    if message.from_user.id == 722714127:
+        from main import bot
+        user_id_str = message.text[4:].strip()
+        if user_id_str.isdigit():
+            user_id = int(user_id_str)
+            user_exist = await rq.get_user_by_user_id(user_id)
+            if user_exist:
                 user = await bot.get_chat(user_id_str)
-                await message.answer(f'Користувача @{user.username} додано до адмінів')
+                if not user_exist.is_admin:
+                    await rq.add_admin(user_id)
+                    user = await bot.get_chat(user_id_str)
+                    await message.answer(f'Користувача @{user.username} додано до адмінів')
+                else:
+                    await message.answer(f'Користувач @{user.username} вже є адміном')
             else:
-                await message.answer(f'Користувач @{user.username} вже є адміном')
+                await message.answer('Такого користувача немає')
         else:
-            await message.answer('Такого користувача немає')
-    else:
-        await message.answer('Введено некоректний tg_id')
+            await message.answer('Введено некоректний tg_id')
 
 
 @router.message(Command('delete'))
 async def add_admin(message: Message):
-    from main import bot
-    user_id_str = message.text[7:].strip()
-    if user_id_str.isdigit():
-        user_id = int(user_id_str)
-        user_exist = await rq.get_user_by_user_id(user_id)
-        if user_exist:
-            user = await bot.get_chat(user_id_str)
-            if user_exist.is_admin:
-                await rq.delete_admin(user_id)
+    if message.from_user.id == 722714127:
+        from main import bot
+        user_id_str = message.text[7:].strip()
+        if user_id_str.isdigit():
+            user_id = int(user_id_str)
+            user_exist = await rq.get_user_by_user_id(user_id)
+            if user_exist:
                 user = await bot.get_chat(user_id_str)
-                await message.answer(f'Користувача @{user.username} видалено з адмінів')
+                if user_exist.is_admin:
+                    await rq.delete_admin(user_id)
+                    user = await bot.get_chat(user_id_str)
+                    await message.answer(f'Користувача @{user.username} видалено з адмінів')
+                else:
+                    await message.answer(f'Користувач @{user.username} НЕ є адміном')
             else:
-                await message.answer(f'Користувач @{user.username} НЕ є адміном')
+                await message.answer('Такого користувача немає')
         else:
-            await message.answer('Такого користувача немає')
-    else:
-        await message.answer('Введено некоректний tg_id')
+            await message.answer('Введено некоректний tg_id')
+
+@router.message(Command('set_schedule'))
+async def add_admin(message: Message):
+    if message.from_user.id == 722714127:
+        await message.answer('🕒Це займе деякий час...')
+
+        await message.message.edit_text(f"Завантаження... ⏳")
+
+        await rq.set_groups()
+        await rq.clear_schedule()
+        await rq.set_schedule()
+
+        await message.message.edit_text('Розклад успішно перезаписано ✅')
+
+@router.message(Command('set_sticker'))
+async def set_sticker(message: Message):
+    sticker_id = message.text.split()[1]
+    if message.from_user.id == 722714127:
+        await rq.set_user_sticker(message.from_user.id, sticker_id)
+        await message.answer('Ваш стікер змінено 🦠')
 

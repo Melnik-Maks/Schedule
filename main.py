@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 #from app.handlers import router
 from app.database.models import async_main
-from app.database.requests import add_admin, set_user, set_db
+from app.database.requests import set_db
 from app.utils import send_reminders
 from app.keyboards.menu import set_bot_commands
 
@@ -48,8 +48,3 @@ if __name__ == '__main__':
         asyncio.run(main())
     except KeyboardInterrupt:
         print('Exit')
-
-"""
-Для адмінів додати кнопку змінити розклад і додати силку на EXEL, та кнопку Оновити розклад
-
-"""

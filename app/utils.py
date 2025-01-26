@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 
 from app.keyboards import yesterday_and_tomorrow
 
-from app.database.requests import get_schedules_for_reminders, get_users_for_reminder_by_group_id, get_chats_by_group_id, get_schedule_by_day
+from app.database.requests import get_schedules_for_reminders, get_users_for_reminder_by_group_id, get_chats_by_group_id, get_schedule_by_day, get_group_title_by_id
+from config import daysOfTheWeek
 
 def day_to_accusative(day: str) -> str:
     if day == 'Середа':
@@ -115,37 +116,40 @@ async def send_schedule(destination: Message | CallbackQuery, tg_id: int, day: s
 
 async def send_reminders(bot):
     now = datetime.now()
+    if now.weekday() == 6:
+        return
     start_pair = now + timedelta(minutes=5)
     end_pair = now + timedelta(minutes=85)
     reminder_time = f'{start_pair.strftime("%H:%M")}-{end_pair.strftime("%H:%M")}'
 
-    schedules = await get_schedules_for_reminders(reminder_time)
+    day = daysOfTheWeek[now.weekday()]
+    schedules = await get_schedules_for_reminders(day, reminder_time)
 
     for schedule in schedules:
-        subject_info = f"⏰ <b>Нагадування про пару!</b>\n\n"
-        subject_info += (
-            f"📚 <b>{schedule.subject}</b>\n"
-            f"⏰ <i>{schedule.time}</i>\n"
-            f"📖 <i>{schedule.type.capitalize()}</i>\n"
-            f"👨‍🏫 {schedule.teacher}\n"
-        )
+        if check_dates(schedule.weeks, schedule.alternation):
+            #subject_info = f"⏰ <b>Нагадування про пару!</b>\n\n"
+            subject_info = (
+                f"📚 <b>{schedule.subject}</b>\n"
+                f"⏰ <i>{schedule.time}</i>\n"
+                f"📖 <i>{schedule.type.capitalize()}</i>\n"
+                f"👨‍🏫 {schedule.teacher}\n"
+            )
 
-        if schedule.room.strip():
-            subject_info += f"🏫 {schedule.room}\n"
-        subject_info += f"🗓️ {schedule.weeks}\n"
+            if schedule.room.strip():
+                subject_info += f"🏫 {schedule.room}\n"
+            subject_info += f"🗓️ {schedule.weeks}\n"
 
-        if schedule.zoom_link.strip():
-            subject_info += f"🔗 <a href='{schedule.zoom_link}'>Перейти до Zoom</a>\n\n"
-        subject_info += f"🚦<b>{schedule.type.capitalize()} почнеться через 5 хвилин!</b>"
+            if schedule.zoom_link.strip():
+                subject_info += f"🔗 <a href='{schedule.zoom_link}'>Перейти до Zoom</a>\n\n"
+            subject_info += f"🚦<b>{schedule.type.capitalize()} почнеться через 5 хвилин!</b>"
 
-        if schedule.type.strip().lower() == 'лекція':
             chats = await get_chats_by_group_id(schedule.group_id)
             for chat in chats:
-                await bot.send_message(chat.chat_id, subject_info, parse_mode="HTML")
+                await bot.send_message(chat.chat_id, f"🚨🚨🚨\n⏰ <b>Нагадування про пару для <strong>{await get_group_title_by_id(schedule.group_id)}/{schedule.subgroup}</strong>!</b>\n\n" + subject_info, parse_mode="HTML", disable_web_page_preview=True)
 
-        users = await get_users_for_reminder_by_group_id(schedule.group_id)
-        for user in users:
-            await bot.send_message(user.tg_id, subject_info, parse_mode="HTML")
+            users = await get_users_for_reminder_by_group_id(schedule.group_id, schedule.subgroup)
+            for user in users:
+                await bot.send_message(user.tg_id, f"⏰ <b>Нагадування про пару!</b>\n\n" + subject_info, parse_mode="HTML", disable_web_page_preview=True)
 
 async def is_bot_admin(bot: Bot, chat_id: int) -> bool:
     member = await bot.get_chat_member(chat_id, bot.id)

@@ -99,10 +99,11 @@ async def get_schedule_by_day(day: str, tg_id: int):
         schedules = result.scalars().all()
         return schedules
 
-async def get_schedules_for_reminders(reminder_time: str):
+async def get_schedules_for_reminders(day: str, reminder_time: str):
     async with async_session() as session:
         result = await session.execute(
             select(Schedule).where(
+                Schedule.day == day,
                 Schedule.time == reminder_time
             )
         )

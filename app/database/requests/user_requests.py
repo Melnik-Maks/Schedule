@@ -68,14 +68,23 @@ async def get_all_admins():
         users = result.scalars().all()
         return users
 
-async def set_user(tg_id: int) -> None:
+async def set_user(tg_id: int, admin: bool = False) -> None:
     random_sticker_id = random.choice(stickers)
     async with async_session() as session:
         async with session.begin():
             user = await session.scalar(select(User).where(User.tg_id == tg_id))
 
             if not user:
-                session.add(User(tg_id=tg_id, reminder=False, is_admin=False, sticker_id=random_sticker_id))
+                session.add(User(tg_id=tg_id, reminder=False, is_admin=admin, sticker_id=random_sticker_id))
+                await session.commit()
+
+async def set_user_sticker(tg_id: int, sticker_id: str):
+    async with async_session() as session:
+        async with session.begin():
+            user = await session.scalar(select(User).where(User.tg_id == tg_id))
+
+            if user:
+                user.sticker_id = sticker_id
                 await session.commit()
 
 async def get_user_sticker_id(tg_id: int) -> str:
@@ -169,11 +178,12 @@ async def get_user_subgroup_by_user_id(tg_id: int) -> int:
         return subgroup
 
 
-async def get_users_for_reminder_by_group_id(group_id: int):
+async def get_users_for_reminder_by_group_id(group_id: int, subgroup: int):
     async with async_session() as session:
         result = await session.execute(
             select(User).where(
                 User.group_id == group_id,
+                User.subgroup == subgroup,
                 User.reminder == True,
             )
         )

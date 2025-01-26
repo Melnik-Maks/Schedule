@@ -4,12 +4,6 @@ import asyncio
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.utils.markdown import bold, italic, code
-from aiogram.fsm.context import FSMContext
-from pyasn1_modules.rfc8018 import algid_hmacWithSHA1
-from sqlalchemy.util import await_fallback
-import random
 
 
 
@@ -26,13 +20,18 @@ router = Router()
 async def profile(message: Message):
     user = message.from_user
     await message.answer_sticker(await rq.get_user_sticker_id(user.id))
+    subgroup = await rq.get_user_subgroup_by_user_id(user.id)
+    if not subgroup:
+        group = f"{await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}"
+    else:
+        group = f"{await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}/{await rq.get_user_subgroup_by_user_id(user.id)}"
     profile_text = (
         f"👤 <b>Ваш профіль</b>\n\n"
 
         f"⚡️ <b>Ім'я:</b> {user.first_name}\n"
         f"📛 <b>Юзернейм:</b> @{user.username}\n"
         f"🆔 <b>ID користувача:</b> <code>{user.id}</code>\n"
-        f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}/{await rq.get_user_subgroup_by_user_id(user.id)}\n"
+        f"🏫 <b>Група:</b> {group}\n"
     )
 
     await message.answer(profile_text, parse_mode="HTML", reply_markup=await kb.profile(message.from_user.id))
@@ -41,6 +40,11 @@ async def profile(message: Message):
 async def go_back_to_profile(callback: CallbackQuery):
     await callback.answer('🔙 Ви повернулися в профіль')
     user = callback.from_user
+    subgroup = await rq.get_user_subgroup_by_user_id(user.id)
+    if subgroup == 'None':
+        group = f"{await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}"
+    else:
+        group = f"{await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}/{await rq.get_user_subgroup_by_user_id(user.id)}"
 
     profile_text = (
         f"👤 <b>Ваш профіль</b>\n\n"
@@ -48,7 +52,7 @@ async def go_back_to_profile(callback: CallbackQuery):
         f"⚡️ <b>Ім'я:</b> {user.first_name}\n"
         f"📛 <b>Юзернейм:</b> @{user.username}\n"
         f"🆔 <b>ID користувача:</b> <code>{user.id}</code>\n"
-        f"🏫 <b>Група:</b> {await rq.get_group_title_by_id(await rq.get_user_group_id_by_tg_id(user.id))}/{await rq.get_user_subgroup_by_user_id(user.id)}\n"
+        f"🏫 <b>Група:</b> {group}\n"
     )
     await callback.message.edit_text(profile_text, parse_mode='HTML')
 
