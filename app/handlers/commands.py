@@ -94,13 +94,13 @@ async def add_admin(message: Message):
     if message.from_user.id == 722714127:
         await message.answer('🕒Це займе деякий час...')
 
-        await message.message.edit_text(f"Завантаження... ⏳")
+        #await message.edit_text(f"Завантаження... ⏳")
 
         await rq.set_groups()
         await rq.clear_schedule()
         await rq.set_schedule()
 
-        await message.message.edit_text('Розклад успішно перезаписано ✅')
+        await message.answer('Розклад успішно перезаписано ✅')
 
 @router.message(Command('set_sticker'))
 async def set_sticker(message: Message):

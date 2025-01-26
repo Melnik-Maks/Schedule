@@ -1,5 +1,6 @@
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.markdown import bold, italic
+from typing import Union
 
 from aiogram import Bot
 from aiogram.types import ChatMemberAdministrator, ChatMemberOwner
@@ -57,7 +58,7 @@ def date_comparison(a: str, b: str) -> bool:
 
 
 
-async def send_schedule(destination: Message | CallbackQuery, tg_id: int, day: str, add_buttons: bool, today: int = 0) -> None:
+async def send_schedule(destination: Union[Message, CallbackQuery], tg_id: int, day: str, add_buttons: bool, today: int = 0) -> None:
     message = destination.message if isinstance(destination, CallbackQuery) else destination
     schedule = await get_schedule_by_day(day, tg_id)
 
