@@ -116,11 +116,13 @@ async def schedule_for_today(message: Message):
         await message.answer('😌 В неділю пар немає ;)')
     else:
         day = config.daysOfTheWeek[day_number]
+        print(day)
         await send_schedule(message, message.from_user.id, day, False, 1)
 
 @router.message(F.text == '📅 Завтра')
 async def schedule_for_tomorrow(message: Message):
     day_number = (message.date.weekday() + 1) % 7
+
     if day_number == 6:
         await message.answer_sticker(
             "CAACAgIAAxUAAWd60zJyaJFXLJvhFaxCIq00nZ9DAALAUgACLiKgSoppqBV05QeNNgQ"
@@ -128,6 +130,7 @@ async def schedule_for_tomorrow(message: Message):
         await message.answer('😌 В неділю пар немає ;)')
     else:
         day = config.daysOfTheWeek[day_number]
+        print(day)
         await send_schedule(message, message.from_user.id, day, False, 2)
 
 @router.callback_query(F.data.startswith('day_'))

@@ -11,6 +11,8 @@ from app.keyboards import yesterday_and_tomorrow
 
 from app.database.requests import get_schedules_for_reminders, get_users_for_reminder_by_group_id, get_chats_by_group_id, get_schedule_by_day, get_group_title_by_id
 from config import daysOfTheWeek
+import pytz
+
 
 def day_to_accusative(day: str) -> str:
     if day == 'Середа':
@@ -21,10 +23,13 @@ def day_to_accusative(day: str) -> str:
         return 'Суботу'
     return day
 
-def check_dates(dates: str, alternation: bool) -> bool:
+def check_dates(dates: str, alternation: bool, today: int) -> bool:
     if not dates.strip():
         return True
-    date = datetime.now()
+    timezone = pytz.timezone('Europe/Kyiv')
+    date = datetime.now(timezone)
+    if today == 2:
+        date += timedelta(days=1)
 
     periods = dates.split(',')
     for i in periods:
@@ -42,7 +47,8 @@ def check_dates(dates: str, alternation: bool) -> bool:
     return False
 
 def check_alternation(date2: str):
-    date = datetime.now()
+    timezone = pytz.timezone('Europe/Kyiv')
+    date = datetime.now(timezone)
     date2 = datetime.strptime(f"{date.year}.{date2}", "%y.%d.%m")
 
     difference = (date - date2).days
@@ -103,7 +109,7 @@ async def send_schedule(destination: Union[Message, CallbackQuery], tg_id: int, 
                                      disable_web_page_preview=True)
             elif add_buttons:
                 await message.answer(subject_info, parse_mode="HTML", disable_web_page_preview=True)
-            elif check_dates(schedule[i].weeks, schedule[i].alternation):
+            elif check_dates(schedule[i].weeks, schedule[i].alternation, today = today):
                 pair_count += 1
                 await message.answer(subject_info, parse_mode="HTML", disable_web_page_preview=True)
 
@@ -116,7 +122,8 @@ async def send_schedule(destination: Union[Message, CallbackQuery], tg_id: int, 
 
 
 async def send_reminders(bot):
-    now = datetime.now()
+    timezone = pytz.timezone('Europe/Kyiv')
+    now = datetime.now(timezone)
     if now.weekday() == 6:
         return
     start_pair = now + timedelta(minutes=5)
