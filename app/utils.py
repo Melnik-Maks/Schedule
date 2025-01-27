@@ -134,7 +134,7 @@ async def send_reminders(bot):
     schedules = await get_schedules_for_reminders(day, reminder_time)
 
     for schedule in schedules:
-        if check_dates(schedule.weeks, schedule.alternation):
+        if check_dates(schedule.weeks, schedule.alternation, today=0):
             #subject_info = f"⏰ <b>Нагадування про пару!</b>\n\n"
             subject_info = (
                 f"📚 <b>{schedule.subject}</b>\n"
