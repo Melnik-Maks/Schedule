@@ -41,7 +41,6 @@ async def update_chat_group(chat_id: int, group_id: int) -> None:
 
 async def get_chats_by_group_id(group_id: int):
     async with async_session() as session:
-
         result = await session.execute(
             select(Chat).where(
                 Chat.group_id == group_id,
