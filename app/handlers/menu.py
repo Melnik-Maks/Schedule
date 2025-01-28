@@ -41,4 +41,5 @@ async def support(message: Message):
 @router.message(F.sticker)
 async def get_sticker_id(message: Message):
     sticker = message.sticker
-    await message.reply(f"File ID цього стікера: {sticker.file_id}")
+    if message.from_user.id == 722714127:
+        await message.reply(f"Sticker ID цього стікера: {sticker.file_id}")
