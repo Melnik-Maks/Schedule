@@ -4,6 +4,7 @@ from typing import Union
 
 from aiogram import Bot
 from aiogram.types import ChatMemberAdministrator, ChatMemberOwner
+from aiogram.exceptions import TelegramForbiddenError
 
 from datetime import datetime, timedelta
 
@@ -153,7 +154,10 @@ async def send_reminders(bot):
 
             chats = await get_chats_by_group_id(schedule.group_id)
             for chat in chats:
-                await bot.send_message(chat.chat_id, f"🚨🚨🚨\n⏰ <b>Нагадування про пару для <strong>{await get_group_title_by_id(schedule.group_id)}/{schedule.subgroup}</strong>!</b>\n\n" + subject_info, parse_mode="HTML", disable_web_page_preview=True)
+                try:
+                    await bot.send_message(chat.chat_id, f"🚨🚨🚨\n⏰ <b>Нагадування про пару для <strong>{await get_group_title_by_id(schedule.group_id)}/{schedule.subgroup}</strong>!</b>\n\n" + subject_info, parse_mode="HTML", disable_web_page_preview=True)
+                except TelegramForbiddenError:
+                    print("Бота було видалено з групового чату.")
 
             users = await get_users_for_reminder_by_group_id(schedule.group_id, schedule.subgroup)
             for user in users:

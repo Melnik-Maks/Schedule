@@ -18,7 +18,7 @@ async def schedule(tg_id: int):
 
 
 original_schedule = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='📊 EXEL', url='https://docs.google.com/spreadsheets/d/1eCEO-7sEocM7HDyafVcW5bI1n1nvu7De7IxD0RFw3cE/pubhtml#')]
+    [InlineKeyboardButton(text='📊 EXEL', url='https://docs.google.com/spreadsheets/d/e/2PACX-1vTF-GoyTnz88Rhqq7FR5J0BV03jLaudtm4yp5Fw1k6miFa9mQCAfnogqXIzLVl40idpHn1IDnCp_-p3/pubhtml#')]
 ])
 
 def schedule_in_exel(sheet_id: int):
