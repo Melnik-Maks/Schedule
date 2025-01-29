@@ -42,7 +42,7 @@ def check_dates(dates: str, alternation: bool, today: int) -> bool:
             if date_comparison(l, date.strftime("%d.%m")) and date_comparison(date.strftime("%d.%m"), r):
                 if alternation:
                     date2 = datetime.strptime(f"{date.year}.{l}", "%Y.%d.%m")
-                    if date == date2:
+                    if date.strftime('%d.%m') == date2.strftime('%d.%m'):
                         return True
                     difference = (date - date2).days
                     return difference % 14 == 0
