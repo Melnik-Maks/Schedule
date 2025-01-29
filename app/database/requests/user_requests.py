@@ -195,3 +195,21 @@ async def get_user_by_user_id(user_id: int):
         user = await session.scalar(select(User).where(User.tg_id == user_id))
         return user
 
+async def get_all_users():
+    async with async_session() as session:
+        result = await session.execute(
+            select(User)
+        )
+        users = result.scalars().all()
+        return users
+
+async def get_users_by_groups(group_id: int):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(
+                User.group_id == group_id
+            )
+        )
+        users = result.scalars().all()
+        return users
+

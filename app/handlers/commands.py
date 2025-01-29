@@ -28,7 +28,7 @@ async def cmd_start(message: Message):
 
 
 @router.message(Command('group'))
-async def group(message: Message):
+async def group_command(message: Message):
     if message.chat.type == "private":
         await message.answer(
             "<b>Для того, щоб отримувати актуальний розклад, у вашій групі:</b>\n"
@@ -108,4 +108,17 @@ async def set_sticker(message: Message):
     if message.from_user.id == 722714127:
         await rq.set_user_sticker(message.from_user.id, sticker_id)
         await message.answer('Ваш стікер змінено 🦠')
+
+@router.message(Command('get_users'))
+async def get_users(message: Message):
+    from main import bot
+    if message.from_user.id == 722714127:
+        groups = await rq.get_groups()
+        for group in groups:
+            users = await rq.get_users_by_groups(group.id)
+            text = f'<b>{group.specialty}-{group.course}{group.group}</b> ({len(users)} користувачів)\n'
+            for user in users:
+                chat = await bot.get_chat(user.tg_id)
+                text += f'@{chat.username}\n'
+            await message.answer(text, parse_mode='HTML')
 

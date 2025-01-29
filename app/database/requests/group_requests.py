@@ -162,6 +162,15 @@ async def get_group_by_user_id(tg_id: int):
         return None
 
 
+async def get_groups():
+    async with async_session() as session:
+        result = await session.execute(
+            select(Group)
+        )
+        groups = result.scalars().all()
+        return groups
+
+
 async def get_group_by_group_id(group_id: int):
     async with async_session() as session:
         group = await session.scalar(select(Group).where(Group.id == group_id))
